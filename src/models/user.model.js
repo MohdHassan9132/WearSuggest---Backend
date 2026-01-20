@@ -26,12 +26,6 @@ const userSchema = new mongoose.Schema(
         refreshToken: {
             type: String,
         },
-        outfits: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Outfit",
-            },
-        ],
     },
     { timestamps: true }
 );

@@ -1,4 +1,4 @@
-  import mongoose from "mongoose";
+import mongoose from "mongoose";
 
 const clothingItemSchema = new mongoose.Schema(
   {
@@ -6,34 +6,68 @@ const clothingItemSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true
+      index: true,
     },
 
-    category: {
+    type: {
       type: String,
-      enum: ["top", "bottom", "accessory"],
+      enum: ["top", "bottom", "footwear", "outerwear", "accessory"],
       required: true,
       index: true
+    },
+    category: {
+      type: String,
+      required: true,
     },
 
     color: {
       type: String,
-      required: true
-    },
-
-    colorTone: {
-      type: String,
-      enum: ["light", "dark", "neutral"],
       required: true,
-      index: true
     },
 
-    imageURL: String,
-    imagePublicId: String
+    colorGroup: {
+      type: String,
+      enum: ["neutral", "warm", "cool"],
+      required: true,
+      index: true,
+    },
+
+    season: {
+      type: [String],
+      enum: ["summer", "winter", "rainy"],
+      required: true,
+      index: true,
+    },
+
+    occasion: {
+      type: [String],
+      enum: ["casual", "formal", "party"],
+      required: true,
+      index: true,
+    },
+
+    // 🔒 IMAGE IS REQUIRED
+    imageURL: {
+      type: String,
+      required: true,
+    },
+
+    imagePublicId: {
+      type: String,
+      required: true,
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );
 
-clothingItemSchema.index({ owner: 1, category: 1 });
+clothingItemSchema.index({ owner: 1, type: 1 });
 
-export const clothingItem  =  mongoose.model("ClothingItem", clothingItemSchema);
+export const ClothingItem = mongoose.model(
+  "ClothingItem",
+  clothingItemSchema
+);

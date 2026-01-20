@@ -1,61 +1,164 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { asyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { uploadOnCloudinary} from "../utils/cloudinary.js"
-import { clothingItem } from "../models/clothingItem.model.js";
+import { ClothingItem } from "../models/clothingItem.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { COLOR_GROUP_MAP } from "../constants/colors.js";
 import mongoose from "mongoose";
 
 const addClothingItem = asyncHandler(async (req, res) => {
-    
-});
+  let { type, category, color, season, occasion } = req.body;
 
-const getItemById = asyncHandler(async (req, res) => {
-    const {itemId} = req.params
-    if(!mongoose.Types.ObjectId.isValid(itemId)){
-        throw new ApiError(400,"Invalid ItemId")
+  // 1️⃣ Basic required fields
+  if (!type || !category || !color) {
+    throw new ApiError(400, "Type, category and color are required");
+  }
+
+  // 2️⃣ IMAGE IS MANDATORY
+  if (!req.file?.path) {
+    throw new ApiError(400, "Clothing image is required");
+  }
+
+  // 3️⃣ Normalize color
+  const normalizedColor = color.toLowerCase();
+  const colorGroup = COLOR_GROUP_MAP[normalizedColor];
+
+  if (!colorGroup) {
+    throw new ApiError(400, "Unsupported color");
+  }
+
+  // 4️⃣ Normalize season & occasion to arrays
+  const normalizeToArray = (value) => {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+
+    // handle JSON string or single value
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return [value];
     }
-    const item = await clothingItem.findOne({
-        owner: req.user._id,
-        _id: itemId
-    }).select("-imagePublicId")
-    if(!item){
-        throw new ApiError(404,"No item found")
+  };
+
+  season = normalizeToArray(season);
+  occasion = normalizeToArray(occasion);
+
+  // 5️⃣ FORCE RULE FOR ACCESSORIES
+  if (type === "accessory") {
+    season = [];
+    occasion = [];
+  }
+
+  // 6️⃣ VALIDATION FOR NON-ACCESSORY ITEMS
+  if (type !== "accessory") {
+    if (!season.length || !occasion.length) {
+      throw new ApiError(
+        400,
+        "Season and occasion are required for non-accessory items"
+      );
     }
-    res.status(200)
-    .json(new ApiResponse(200,item,"Item fetched successfully"))
+  }
+
+  // 7️⃣ Upload image
+  const uploadResult = await uploadOnCloudinary(req.file.path);
+  if (!uploadResult) {
+    throw new ApiError(500, "Image upload failed");
+  }
+
+  // 8️⃣ Create clothing item
+  const item = await ClothingItem.create({
+    owner: req.user._id,
+    type,
+    category,
+    color: normalizedColor,
+    colorGroup,
+    season,
+    occasion,
+    imageURL: uploadResult.secure_url,
+    imagePublicId: uploadResult.public_id,
+  });
+
+  return res
+    .status(201)
+    .json(new ApiResponse(201, item, "Clothing item added successfully"));
 });
 
-const getAllTops = asyncHandler(async (req, res) => {
-    const tops = await clothingItem.find({
-        owner: req.user._id,
-        category: "top"
-    }).select("-imagePublicId")
-    res.status(200)
-    .json(new ApiResponse(200,tops,"All Tops fetched successully"))
+const getClothingItems = asyncHandler(async (req, res) => {
+  const { type } = req.query;
+
+  const query = {
+    owner: req.user._id,
+    isActive: true,
+  };
+
+  if (type) {
+    query.type = type;
+  }
+
+  const items = await ClothingItem.find(query)
+    .select("-imagePublicId")
+    .sort({ createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, items, "Clothing items fetched successfully"));
+});
+const getClothingItemById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // 1️⃣ Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid clothing item id");
+  }
+
+  // 2️⃣ Fetch item (user scoped)
+  const item = await ClothingItem.findOne({
+    _id: id,
+    owner: req.user._id,
+    isActive: true,
+  }).select("-imagePublicId");
+
+  if (!item) {
+    throw new ApiError(404, "Clothing item not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, item, "Clothing item fetched successfully"));
 });
 
-const getAllBottoms = asyncHandler(async (req, res) => {
-    const bottoms = await clothingItem.find({
-        owner: req.user._id,
-        category: "bottom"  
-    }).select("-imagePublicId")
-    res.status(200)
-    .json(new ApiResponse(200,bottoms,"All bottoms fetched successfully"))
+const deleteClothingItem = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // 1️⃣ Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid clothing item id");
+  }
+
+  // 2️⃣ Find and soft delete
+  const item = await ClothingItem.findOneAndUpdate(
+    {
+      _id: id,
+      owner: req.user._id,
+      isActive: true,
+    },
+    {
+      $set: { isActive: false },
+    },
+    { new: true }
+  );
+
+  if (!item) {
+    throw new ApiError(404, "Clothing item not found");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Clothing item deleted successfully"));
 });
 
-const getAllAccessories = asyncHandler(async (req, res) => {
-    const accessories = await clothingItem.find({
-        owner: req.user._id,
-        category: "accessory"  
-    }).select("-imagePublicId")
-    res.status(200)
-    .json(new ApiResponse(200,accessories,"All accessories fetched successfully"))
-});
 
-export {
-    addClothingItem,
-    getItemById,
-    getAllTops,
-    getAllBottoms,
-    getAllAccessories,
-}
+
+
+export { addClothingItem,getClothingItems,getClothingItemById,deleteClothingItem};

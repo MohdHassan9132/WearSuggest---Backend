@@ -26,7 +26,7 @@ const userSchema = new mongoose.Schema(
         refreshToken: {
             type: String,
         },
-        Outfits: [
+        outfits: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "Outfit",

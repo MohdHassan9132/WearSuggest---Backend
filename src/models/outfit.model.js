@@ -1,34 +1,44 @@
 import mongoose from "mongoose";
 
 const outfitSchema = new mongoose.Schema(
-    {
-        top: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "clothingItem",
-                required: true,
-            },
-        ],
-        bottom: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "clothingItem",
-                required: true,
-            },
-        ],
-        accessories: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "clothingItem",
-            },
-        ],
-        owner: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
+  {
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true
     },
-    { timestamps: true }
+
+    top: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ClothingItem",
+      required: true
+    },
+
+    bottom: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ClothingItem",
+      required: true
+    },
+    accessories: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ClothingItem"
+      }
+    ],
+    
+    lastWornAt: {
+      type: Date,
+      index: true
+    }
+  },
+  { timestamps: true }
 );
 
-export const Outfit = mongoose.model("Outfit", outfitSchema);
+// ONLY enforce uniqueness on top + bottom
+outfitSchema.index(
+  { owner: 1, top: 1, bottom: 1 },
+  { unique: true }
+);
+
+export default mongoose.model("Outfit", outfitSchema);

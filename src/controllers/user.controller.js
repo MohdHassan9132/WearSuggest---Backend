@@ -20,14 +20,15 @@ const registerUser = asyncHandler(async (req, res) => {
     // return res
 
     const { username, email, password } = req.body;
-    console.log(`Username: ${username}`);
-
     if ([username, email, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All fields are mandatory");
     }
 
+    const Username = username.toLowerCase()
+    const Email = email.toLowerCase()
+
     const existingUser = await User.findOne({
-        $or: [{ username }, { email }],
+        $or: [{ username: Username }, { email: Email }],
     });
 
     if (existingUser)
@@ -37,8 +38,8 @@ const registerUser = asyncHandler(async (req, res) => {
         );
 
     const user = await User.create({
-        username: username.toLowerCase(),
-        email,
+        username: Username,
+        email: Email,
         password,
     });
 
@@ -76,7 +77,6 @@ const loginUser = asyncHandler(async (req, res) => {
             400,
             "User is required to provide either username or email for login"
         );
-
     const user = await User.findOne({
         $or: [{ username }, { email }],
     });
@@ -84,7 +84,7 @@ const loginUser = asyncHandler(async (req, res) => {
     if (!user) throw new ApiError(404, "User not found!");
 
     if (!password || password.trim() === "")
-        throw (400, "Password is required");
+        throw new ApiError(400, "Password is required");
 
     const isPasswordValid = await user.isPasswordCorrect(password);
 
@@ -136,7 +136,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         .status(200)
         .clearCookie("accessToken", options)
         .clearCookie("refreshToken", options)
-        .json(new ApiResponse(204, {}, "User was logged out successfully! "));
+        .json(new ApiResponse(200, {}, "User was logged out successfully! "));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -213,7 +213,9 @@ const getCurrentUser = asyncHandler(async (req, res) => {
             )
         );
 });
-const getAllSuggestedOutfits = asyncHandler(async (req, res) => {});
+const getAllSuggestedOutfits = asyncHandler(async (req, res) => {
+
+});
 
 export {
     registerUser,

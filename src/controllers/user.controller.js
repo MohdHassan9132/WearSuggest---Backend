@@ -24,8 +24,8 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(400, "All fields are mandatory");
     }
 
-    const Username = username.toLowerCase()
-    const Email = email.toLowerCase()
+    const Username = username.toLowerCase();
+    const Email = email.toLowerCase();
 
     const existingUser = await User.findOne({
         $or: [{ username: Username }, { email: Email }],
@@ -199,6 +199,7 @@ const updatePassword = asyncHandler(async (req, res) => {
 
 const getCurrentUser = asyncHandler(async (req, res) => {
     const currentUser = req.user?.toObject();
+    delete currentUser.outfits
     // Tho this req.user is an object as per typeof but, it is a special object not a plain JS obj, it is verified when i checked with .$__ hence without toObject(), deletion didnt work
 
     if (!currentUser) throw new ApiError(404, "User not found");

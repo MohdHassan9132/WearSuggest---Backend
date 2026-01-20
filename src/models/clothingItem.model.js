@@ -33,15 +33,21 @@ const clothingItemSchema = new mongoose.Schema(
     },
 
     season: {
-      type: [String],
-      enum: ["summer", "winter", "rainy"],
+      type: [{
+        type: String,
+        lowercase: true,
+        enum: ["summer", "winter", "rainy"]
+      }],
       required: true,
       index: true,
     },
 
     occasion: {
-      type: [String],
-      enum: ["casual", "formal", "party"],
+      type: [{
+        type: String,
+        lowercase: true,
+        enum: ["casual", "formal", "party"]
+      }],
       required: true,
       index: true,
     },

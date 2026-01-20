@@ -10,7 +10,9 @@ const pickRandomAccessories = (items, max = 2) => {
   if (!items.length) return [];
 
   const shuffled = [...items].sort(() => 0.5 - Math.random());
-  const count = Math.floor(Math.random() * (max + 1)); // 0..max
+  // Bias towards picking at least 1 item if available, up to max
+  const min = items.length > 0 ? 1 : 0;
+  const count = Math.floor(Math.random() * (max - min + 1)) + min;
   return shuffled.slice(0, count);
 };
 

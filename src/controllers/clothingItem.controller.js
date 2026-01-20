@@ -120,6 +120,47 @@ const getClothingItemById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, item, "Clothing item fetched successfully"));
 });
 
+const getDeletedClothingItems = asyncHandler(async (req, res) => {
+  const items = await ClothingItem.find({
+    owner: req.user._id,
+    isActive: false,
+  })
+    .select("-imagePublicId")
+    .sort({ updatedAt: -1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, items, "Deleted clothing items fetched successfully"));
+});
+
+const restoreClothingItem = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid clothing item id");
+  }
+
+  const item = await ClothingItem.findOneAndUpdate(
+    {
+      _id: id,
+      owner: req.user._id,
+      isActive: false,
+    },
+    {
+      $set: { isActive: true },
+    },
+    { new: true }
+  );
+
+  if (!item) {
+    throw new ApiError(404, "Clothing item not found or already active");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, item, "Clothing item restored successfully"));
+});
+
 const deleteClothingItem = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -153,4 +194,4 @@ const deleteClothingItem = asyncHandler(async (req, res) => {
 
 
 
-export { addClothingItem, getClothingItems, getClothingItemById, deleteClothingItem };
+export { addClothingItem, getClothingItems, getDeletedClothingItems, restoreClothingItem, getClothingItemById, deleteClothingItem };

@@ -155,7 +155,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     if (!user) throw new ApiError(401, "Invalid Refresh Token!"); // User not valid or no user found
 
-    console.log("Decoded Refresh Token: ", decodedToken);
     if (!(incomingRefreshToken === user.refreshToken))
         throw new ApiError(401, "Refresh Token Expired!");
     // Expired Token - Even if user is valid, refresh and login not allowed anymore
@@ -166,8 +165,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     user.refreshToken = refreshToken;
     user.save({ validateBeforeSave: false });
 
-    console.log("Before Refreshing: ", incomingRefreshToken);
-    console.log("After Refreshing: ", refreshToken);
 
     return res
         .status(200)

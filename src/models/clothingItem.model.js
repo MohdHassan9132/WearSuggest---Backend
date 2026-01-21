@@ -52,7 +52,6 @@ const clothingItemSchema = new mongoose.Schema(
       index: true,
     },
 
-    // 🔒 IMAGE IS REQUIRED
     imageURL: {
       type: String,
       required: true,

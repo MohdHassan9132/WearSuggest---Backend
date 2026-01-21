@@ -43,7 +43,6 @@ const outfitSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ONLY enforce uniqueness on top + bottom
 outfitSchema.index(
   { owner: 1, top: 1, bottom: 1 },
   { unique: true }

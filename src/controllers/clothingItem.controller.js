@@ -1,4 +1,4 @@
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { asyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ClothingItem } from "../models/clothingItem.model.js";
@@ -18,14 +18,6 @@ const analyzeClothingImage = asyncHandler(async (req, res) => {
         if (!aiMetadata) {
             throw new ApiError(500, "Failed to analyze image");
         }
-
-        // Clean up the temp file since we only needed it for analysis
-        // In a real prod env, we might stream to memory instead of disk upload for this
-        // but since upload middleware saves it, we can keep it or let OS clean temp
-        // Actually, multer DiskStorage saves it. Ideally we delete it if not saving item yet.
-        // For simplicity in this flow, we'll let it persist or user will re-upload for add.
-        // Or if we want to be strict: fs.unlinkSync(req.file.path); 
-
         return res.status(200).json(new ApiResponse(200, aiMetadata, "Image analyzed successfully"));
     } catch (error) {
         console.error("AI Analysis Failed:", error);
@@ -92,12 +84,11 @@ const getClothingItems = asyncHandler(async (req, res) => {
 const getClothingItemById = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    // 1️⃣ Validate ObjectId
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new ApiError(400, "Invalid clothing item id");
     }
 
-    // 2️⃣ Fetch item (user scoped)
     const item = await ClothingItem.findOne({
         _id: id,
         owner: req.user._id,
@@ -165,12 +156,10 @@ const restoreClothingItem = asyncHandler(async (req, res) => {
 const deleteClothingItem = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    // 1️⃣ Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new ApiError(400, "Invalid clothing item id");
     }
 
-    // 2️⃣ Find and soft delete
     const item = await ClothingItem.findOneAndUpdate(
         {
             _id: id,

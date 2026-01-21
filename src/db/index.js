@@ -7,12 +7,9 @@ const databaseConnection = async () => {
         );
 
         console.log("MongoDB connected successfully!");
-        console.log("DB Name: ", connectionInstance.connection.name);
-        console.log("Host: ", connectionInstance.connection.host);
-        console.log("Port Number: ", connectionInstance.connection.port);
     } catch (error) {
         throw new Error(`MongoDB failed to connect: ${error.message}`);
-        process.exit(1);
+    
     }
 };
 

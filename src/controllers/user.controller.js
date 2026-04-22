@@ -19,6 +19,16 @@ const registerUser = asyncHandler(async (req, res) => {
     // check for user creation
     // return res
 
+        let bodyMeasurements;
+    if (req.body.bodyMeasurements) {
+        bodyMeasurements = typeof req.body.bodyMeasurements === "string" 
+            ? JSON.parse(req.body.bodyMeasurements) 
+            : req.body.bodyMeasurements;
+    }
+        
+    // If footsize isn't provided, it will just be undefined (which Mongoose allows)
+    const footsize = req.body.footsize;
+
     const { username, email, password } = req.body;
     if ([username, email, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All fields are mandatory");
@@ -41,6 +51,8 @@ const registerUser = asyncHandler(async (req, res) => {
         username: Username,
         email: Email,
         password,
+        bodyMeasurements,
+        footsize
     });
 
     const createdUser = await User.findById(user._id).select(

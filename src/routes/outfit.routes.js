@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { JWTVerify } from "../middleware/auth.middleware.js";
+import { JWTVerify, verifyUser } from "../middleware/auth.middleware.js";
 import {
   suggestOutfit,
   suggestToneBasedOutfit,
@@ -7,9 +7,8 @@ import {
 } from "../controllers/outfit.controller.js";
 
 const router = Router();
-
-router.post("/suggest", JWTVerify, suggestOutfit);
-router.post("/suggest-tone", JWTVerify, suggestToneBasedOutfit);
-router.get("/recent", JWTVerify, getRecentOutfits);
+router.post("/suggest", JWTVerify, verifyUser,suggestOutfit);
+router.post("/suggest-tone", JWTVerify, verifyUser,suggestToneBasedOutfit);
+router.get("/recent", JWTVerify,verifyUser, getRecentOutfits);
 
 export default router;

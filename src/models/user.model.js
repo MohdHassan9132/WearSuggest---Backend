@@ -3,31 +3,63 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema(
-    {
-        username: {
-            type: String,
-            required: true,
-            unique: true,
-            lowercase: true,
-            trim: true,
-            index: true,
-        },
-        email: {
-            type: String,
-            required: true,
-            unique: true,
-            lowercase: true,
-            trim: true,
-        },
-        password: {
-            type: String,
-            required: [true, "Password is necessary to move ahead in the app!"],
-        },
-        refreshToken: {
-            type: String,
-        },
+{
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  },
+
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
+  },
+
+  password: {
+    type: String,
+    required: true,
+  },
+
+  refreshToken: {
+    type: String,
+  },
+
+  bodyMeasurements: {
+    upper: {
+      chest: Number,
+      waist: Number,
+      shoulder: Number,
+      sleeveLength: Number,
     },
-    { timestamps: true }
+    lower: {
+      waist: Number,
+      thigh: Number,
+      length: Number,
+    },
+    height: Number
+  },
+
+  footsize: {
+    region:{
+      type: String,
+      enum:["Indian","UK","US"]
+    },
+    size: Number
+  },
+
+  measurementUnit: {
+    type: String,
+    enum: ["cm"],
+    default: "cm"
+  }
+
+},
+{ timestamps: true }
 );
 
 userSchema.pre("save", async function () {
@@ -46,6 +78,7 @@ userSchema.methods.generateAccessToken = function () {
             username: this.username,
             fullName: this.fullName,
             email: this.email,
+            role: "user",
         },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }

@@ -1,5 +1,4 @@
 import { rateLimit } from "express-rate-limit";
-import { app } from "../app.js";
 
 export const rateLimiter = function (timeInMilliseconds, requestsAllowed) {
     return rateLimit({

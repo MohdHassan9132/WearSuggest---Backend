@@ -7,6 +7,7 @@ import { Outfit } from "../models/outfit.model.js";
 import { generateKlingToken } from "../scripts/kling.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { buildTryOnPayload } from "../utils/tryOnImageBuilder.js";
+import { rateLimit } from "express-rate-limit";
 
 const createTryOn = asyncHandler(async (req, res) => {
     const { outfitId } = req.body;
@@ -37,28 +38,28 @@ const createTryOn = asyncHandler(async (req, res) => {
     const token = generateKlingToken();
     const externalTaskId = `tryon_${Date.now()}`;
 
-let response;
+    let response;
 
-try {
-    response = await axios.post(
-        "https://api-singapore.klingai.com/v1/images/kolors-virtual-try-on",
-        {
-            model_name: "kolors-virtual-try-on-v1-5",
-            human_image,
-            cloth_image,
-            external_task_id: externalTaskId,
-        },
-        {
-            headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
+    try {
+        response = await axios.post(
+            "https://api-singapore.klingai.com/v1/images/kolors-virtual-try-on",
+            {
+                model_name: "kolors-virtual-try-on-v1-5",
+                human_image,
+                cloth_image,
+                external_task_id: externalTaskId,
             },
-        }
-    );
-} catch (error) {
-    console.log(error.data);
-    throw new ApiError(503, "Service Unavilable");
-}
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+    } catch (error) {
+        console.log(error.data);
+        throw new ApiError(503, "Service Unavilable");
+    }
     const task = await VirtualTryOn.create({
         owner: req.user._id,
         humanImage: "base64",
@@ -232,7 +233,10 @@ const getTryOnStatusV21 = asyncHandler(async (req, res) => {
             }
         );
     } catch (error) {
-        console.log("❌ V2.1 Status Error:", error.response?.data || error.message);
+        console.log(
+            "❌ V2.1 Status Error:",
+            error.response?.data || error.message
+        );
         throw new ApiError(503, "V2.1 status fetch failed");
     }
 
@@ -255,9 +259,15 @@ const getTryOnStatusV21 = asyncHandler(async (req, res) => {
 
     await task.save();
 
-    return res.status(200).json(
-        new ApiResponse(200, task, "V2.1 Status updated")
-    );
+    return res
+        .status(200)
+        .json(new ApiResponse(200, task, "V2.1 Status updated"));
 });
 
-export { createTryOn, getTryOnStatus, getUserTryOns, createTryOnV21,getTryOnStatusV21 };
+export {
+    createTryOn,
+    getTryOnStatus,
+    getUserTryOns,
+    createTryOnV21,
+    getTryOnStatusV21,
+};

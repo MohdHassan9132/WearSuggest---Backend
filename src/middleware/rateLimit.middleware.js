@@ -1,7 +1,8 @@
 import { rateLimit } from "express-rate-limit";
+import { app } from "../app.js";
 
-export const lifeTimeLimiter = function (timeInMilliseconds, requestsAllowed) {
-    rateLimit({
+export const rateLimiter = function (timeInMilliseconds, requestsAllowed) {
+    return rateLimit({
         windowMs: timeInMilliseconds,
         max: requestsAllowed,
         message: "Too many requests, this IP is blocked permanently.",

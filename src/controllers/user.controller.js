@@ -6,6 +6,8 @@ import jwt from "jsonwebtoken";
 const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "None"//for production only in local host should be lax
+    
 };
 
 const registerUser = asyncHandler(async (req, res) => {

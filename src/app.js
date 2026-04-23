@@ -7,6 +7,7 @@ const app = express();
 
 app.use(
     cors({
+        allowedHeaders: true,
         origin: process.env.FRONTEND_URL,
         credentials: true,
     })

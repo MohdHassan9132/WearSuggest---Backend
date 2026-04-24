@@ -24,7 +24,10 @@ const analyzeClothingImage = asyncHandler(async (req, res) => {
         return res.status(200).json(new ApiResponse(200, aiMetadata, "Image analyzed successfully"));
     } catch (error) {
         console.error("AI Analysis Failed:", error);
-        throw new ApiError(500, "AI analysis failed");
+        if(req.file.path){
+            fs.unlinkSync(req.file.path)
+        }
+        throw new ApiError(503, "AI analysis failed");
     }
 });
 

@@ -8,6 +8,50 @@ import { generateClothingMetadata } from "../services/ai/tagging.service.js";
 import mongoose from "mongoose";
 import fs from "fs";
 
+const VALID_OCCASIONS = ["casual", "formal", "party"];
+const VALID_SEASONS = ["summer", "winter", "rainy"];
+
+const normalizeOccasion = (occasion) => {
+    if (Array.isArray(occasion)) {
+        if (occasion.length !== 1) {
+            throw new ApiError(400, "Occasion must contain exactly one value");
+        }
+
+        [occasion] = occasion;
+    }
+
+    if (typeof occasion !== "string") {
+        throw new ApiError(400, "Occasion is required");
+    }
+
+    const normalizedOccasion = occasion.trim().toLowerCase();
+
+    if (!VALID_OCCASIONS.includes(normalizedOccasion)) {
+        throw new ApiError(400, "Occasion must be one of casual, formal, or party");
+    }
+
+    return normalizedOccasion;
+};
+
+const normalizeSeason = (season) => {
+    const seasonList = Array.isArray(season) ? season : [season];
+    const normalizedSeason = seasonList
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase());
+
+    if (!normalizedSeason.length) {
+        throw new ApiError(400, "Season must contain at least one value");
+    }
+
+    const invalidSeason = normalizedSeason.find((value) => !VALID_SEASONS.includes(value));
+
+    if (invalidSeason) {
+        throw new ApiError(400, "Season must only include summer, winter, or rainy");
+    }
+
+    return [...new Set(normalizedSeason)];
+};
+
 const analyzeClothingImage = asyncHandler(async (req, res) => {
     if (!req.file) throw new ApiError(400, "Image is required for analysis");
 
@@ -42,6 +86,8 @@ const addClothingItem = asyncHandler(async (req, res) => {
     }
 
     const normalizedColor = color.toLowerCase();
+    const normalizedOccasion = normalizeOccasion(occasion);
+    const normalizedSeason = normalizeSeason(season);
     colorGroup = COLOR_GROUP_MAP[normalizedColor];
     if (!colorGroup) {
         throw new ApiError(400, `Unsupported color: ${color}`);
@@ -56,8 +102,8 @@ const addClothingItem = asyncHandler(async (req, res) => {
         category,
         color: normalizedColor,
         colorGroup,
-        season,
-        occasion,
+        season: normalizedSeason,
+        occasion: normalizedOccasion,
         imageURL: uploadResult.secure_url,
         imagePublicId: uploadResult.public_id,
     });

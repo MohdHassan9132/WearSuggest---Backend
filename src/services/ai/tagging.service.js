@@ -6,7 +6,7 @@ export const generateClothingMetadata = async (imageBuffer, mimeType) => {
   
   // Use the genAI instance to get the model
   const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     // System instruction helps Gemini follow your DB rules
     systemInstruction: `You are a professional fashion cataloger. 
     Select the closest matching color from this list: [${validColors.join(", ")}].
@@ -22,7 +22,7 @@ export const generateClothingMetadata = async (imageBuffer, mimeType) => {
         type: { type: "string", enum: ["top", "bottom", "footwear", "outerwear", "accessory"] },
         color: { type: "string", enum: validColors },
         season: { type: "array", items: { type: "string", enum: ["summer", "winter", "rainy"] } },
-        occasion: { type: "array", items: { type: "string", enum: ["casual", "formal", "party"] } }
+        occasion: { type: "string", enum: ["casual", "formal", "party"] }
       },
       required: ["category", "type", "color", "season", "occasion"]
     }

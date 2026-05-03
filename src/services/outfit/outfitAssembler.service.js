@@ -5,22 +5,100 @@ import { filterByOccasion } from "./occasion.service.js";
 import { filterBySeason } from "./season.service.js";
 import { getValidTopBottomPairs } from "./color.service.js";
 
-const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const pickRandomAccessories = (items, max = 2) => {
-  if (!items.length) return [];
-
-  const shuffled = [...items].sort(() => 0.5 - Math.random());
-  // Bias towards picking at least 1 item if available, up to max
-  const min = items.length > 0 ? 1 : 0;
-  const count = Math.floor(Math.random() * (max - min + 1)) + min;
-  return shuffled.slice(0, count);
-};
-
-
 const ONE_DAY = 24 * 60 * 60 * 1000;
 
-export const generateOutfit = async ({ userId, occasion, season }) => {
-  // 1️⃣ Fetch active clothing
+const pickRandom = (items) =>
+  items[Math.floor(Math.random() * items.length)];
+
+const sortByStableKey = (items) =>
+  [...items].sort((left, right) => {
+    const createdAtCompare =
+      new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+
+    if (createdAtCompare !== 0) {
+      return createdAtCompare;
+    }
+
+    return String(left._id).localeCompare(String(right._id));
+  });
+
+const sortPairsDeterministically = (pairs) =>
+  [...pairs].sort((left, right) => {
+    const leftKey = `${left.top._id}:${left.bottom._id}`;
+    const rightKey = `${right.top._id}:${right.bottom._id}`;
+    return leftKey.localeCompare(rightKey);
+  });
+
+const splitByCategory = (items) => {
+  const categories = {
+    top: [],
+    bottom: [],
+    footwear: [],
+    outerwear: [],
+    accessory: [],
+  };
+
+  for (const item of sortByStableKey(items)) {
+    if (categories[item.type]) {
+      categories[item.type].push(item);
+    }
+  }
+
+  return categories;
+};
+
+const buildFilteredPools = (items, occasion, season) => {
+  const occasionFiltered = filterByOccasion(items, occasion);
+  const seasonFiltered = filterBySeason(occasionFiltered, season);
+  return splitByCategory(seasonFiltered);
+};
+
+const selectAccessories = (items, max = 2) => sortByStableKey(items).slice(0, max);
+
+const selectOuterwear = (items, includeOuterwear) => {
+  if (!includeOuterwear) {
+    return null;
+  }
+
+  return items.length ? pickRandom(items) : null;
+};
+
+const selectFootwear = (items, pair) => {
+  const sortedFootwear = sortByStableKey(items);
+
+  const matchTop = sortedFootwear.filter(
+    (item) => item.colorGroup === pair.top.colorGroup
+  );
+
+  const matchBottom = sortedFootwear.filter(
+    (item) => item.colorGroup === pair.bottom.colorGroup
+  );
+
+  if (matchTop.length) return pickRandom(matchTop);
+  if (matchBottom.length) return pickRandom(matchBottom);
+
+  return sortedFootwear.length ? pickRandom(sortedFootwear) : null;
+};
+
+const buildOutfitPayload = ({
+  pair,
+  selectedFootwear,
+  selectedOuterwear,
+  selectedAccessories,
+}) => ({
+  top: pair.top,
+  bottom: pair.bottom,
+  footwear: selectedFootwear,
+  outerwear: selectedOuterwear,
+  accessories: selectedAccessories,
+});
+
+export const generateOutfit = async ({
+  userId,
+  occasion,
+  season,
+  includeOuterwear = false,
+}) => {
   const items = await ClothingItem.find({
     owner: userId,
     isActive: true,
@@ -30,31 +108,30 @@ export const generateOutfit = async ({ userId, occasion, season }) => {
     throw new ApiError(400, "No clothing items found");
   }
 
-  // 2️⃣ Apply filters
-  let filtered = filterByOccasion(items, occasion);
-  filtered = filterBySeason(filtered, season);
+  const {
+    top: tops,
+    bottom: bottoms,
+    footwear,
+    outerwear,
+    accessory: accessories,
+  } = buildFilteredPools(items, occasion, season);
 
-  const tops = filtered.filter(i => i.type === "top");
-  const bottoms = filtered.filter(i => i.type === "bottom");
-  const footwear = filtered.filter(i => i.type === "footwear");
-  const outerwear = filtered.filter(i => i.type === "outerwear");
-  const accessories = filtered.filter(i => i.type === "accessory");
-
-
-  if (!tops.length || !bottoms.length || !footwear.length) {
-    throw new ApiError(400, "Not enough clothing items to form an outfit");
+  if (!tops.length || !bottoms.length) {
+    throw new ApiError(
+      400,
+      "Not enough upper or lower items for selected occasion and season"
+    );
   }
 
-  // 3️⃣ Generate valid color pairs
-  const validPairs = getValidTopBottomPairs(tops, bottoms);
+  const validPairs = sortPairsDeterministically(getValidTopBottomPairs(tops, bottoms));
 
   if (!validPairs.length) {
     throw new ApiError(400, "No color-compatible outfit found");
   }
 
   const now = new Date();
+  const selectedAccessories = selectAccessories(accessories);
 
-  // 4️⃣ Try to find a non-recent outfit
   for (const pair of validPairs) {
     const existing = await Outfit.findOne({
       owner: userId,
@@ -63,16 +140,15 @@ export const generateOutfit = async ({ userId, occasion, season }) => {
     });
 
     const recentlyWorn =
-      existing?.lastWornAt &&
-      now - existing.lastWornAt < ONE_DAY;
+      existing?.lastWornAt && now - existing.lastWornAt < ONE_DAY;
 
-    if (recentlyWorn) continue;
+    if (recentlyWorn) {
+      continue;
+    }
 
-    const selectedAccessories = pickRandomAccessories(accessories);
-    const selectedFootwear = pickRandom(footwear);
-    const selectedOuterwear = outerwear.length ? pickRandom(outerwear) : null;
+    const selectedFootwear = selectFootwear(footwear, pair);
+    const selectedOuterwear = selectOuterwear(outerwear, includeOuterwear);
 
-    // 5️⃣ Save / update outfit usage
     await Outfit.findOneAndUpdate(
       {
         owner: userId,
@@ -82,11 +158,10 @@ export const generateOutfit = async ({ userId, occasion, season }) => {
       {
         $set: {
           lastWornAt: now,
-          accessories: selectedAccessories.map(a => a._id),
-          footwear: selectedFootwear._id,
-          outerwear: selectedOuterwear ? selectedOuterwear._id : null
+          accessories: selectedAccessories.map((item) => item._id),
+          footwear: selectedFootwear?._id ?? null,
+          outerwear: selectedOuterwear?._id ?? null,
         },
-
       },
       {
         upsert: true,
@@ -94,50 +169,53 @@ export const generateOutfit = async ({ userId, occasion, season }) => {
       }
     );
 
-    return {
-      top: pair.top,
-      bottom: pair.bottom,
-      footwear: selectedFootwear,
-      outerwear: selectedOuterwear,
-      accessories: selectedAccessories
-    };
+    return buildOutfitPayload({
+      pair,
+      selectedFootwear,
+      selectedOuterwear,
+      selectedAccessories,
+    });
   }
 
-  // 6️⃣ Fallback (only one possible outfit)
-  const fallback = validPairs[0];
-  const fallbackAccessories = pickRandomAccessories(accessories);
-  const fallbackFootwear = pickRandom(footwear);
-  const fallbackOuterwear = outerwear.length ? pickRandom(outerwear) : null;
+  const fallbackPair = validPairs[0];
+  const selectedFootwear = selectFootwear(footwear, fallbackPair);
+  const selectedOuterwear = selectOuterwear(outerwear, includeOuterwear);
 
   await Outfit.findOneAndUpdate(
     {
       owner: userId,
-      top: fallback.top._id,
-      bottom: fallback.bottom._id,
+      top: fallbackPair.top._id,
+      bottom: fallbackPair.bottom._id,
     },
     {
       $set: {
         lastWornAt: now,
-        accessories: fallbackAccessories.map(a => a._id),
-        footwear: fallbackFootwear._id,
-        outerwear: fallbackOuterwear ? fallbackOuterwear._id : null
+        accessories: selectedAccessories.map((item) => item._id),
+        footwear: selectedFootwear?._id ?? null,
+        outerwear: selectedOuterwear?._id ?? null,
       },
     },
     { upsert: true }
   );
 
   return {
-    top: fallback.top,
-    bottom: fallback.bottom,
-    footwear: fallbackFootwear,
-    outerwear: fallbackOuterwear,
-    accessories: fallbackAccessories,
+    ...buildOutfitPayload({
+      pair: fallbackPair,
+      selectedFootwear,
+      selectedOuterwear,
+      selectedAccessories,
+    }),
     note: "Only one possible outfit available",
   };
 };
 
-export const generateToneBasedOutfit = async ({ userId, occasion, season, tone }) => {
-  // 1️⃣ Fetch active clothing
+export const generateToneBasedOutfit = async ({
+  userId,
+  occasion,
+  season,
+  tone,
+  includeOuterwear = false,
+}) => {
   const items = await ClothingItem.find({
     owner: userId,
     isActive: true,
@@ -147,49 +225,49 @@ export const generateToneBasedOutfit = async ({ userId, occasion, season, tone }
     throw new ApiError(400, "No clothing items found");
   }
 
-  // 2️⃣ Apply Filters (Season & Occasion)
-  // Reuse existing logic
-  let filtered = filterByOccasion(items, occasion);
-  filtered = filterBySeason(filtered, season);
+  const normalizedTone = tone.toLowerCase();
+  const pools = buildFilteredPools(items, occasion, season);
 
-  // 3️⃣ Apply Tone Filter
-  // Filter items that match the requested colorGroup (tone)
-  const tonedItems = filtered.filter(i => i.colorGroup === tone);
+  const tops = pools.top.filter((item) => item.colorGroup === normalizedTone);
+  const bottoms = pools.bottom.filter((item) => item.colorGroup === normalizedTone);
+  const footwear = pools.footwear.filter((item) => item.colorGroup === normalizedTone);
+  const outerwear = pools.outerwear.filter((item) => item.colorGroup === normalizedTone);
+  const accessories = pools.accessory.filter((item) => item.colorGroup === normalizedTone);
 
-  const tops = tonedItems.filter(i => i.type === "top");
-  const bottoms = tonedItems.filter(i => i.type === "bottom");
-  const footwear = tonedItems.filter(i => i.type === "footwear");
-  const outerwear = tonedItems.filter(i => i.type === "outerwear");
-  const accessories = tonedItems.filter(i => i.type === "accessory");
-
-  if (!tops.length || !bottoms.length || !footwear.length) {
-    throw new ApiError(400, `Not enough '${tone}' items to form an outfit for ${season}/${occasion}`);
+  if (!tops.length || !bottoms.length) {
+    throw new ApiError(
+      400,
+      "Not enough upper or lower items for selected occasion and season"
+    );
   }
 
-  // 4️⃣ Select Random Items (No logic/rules, just random from the filtered tone pool)
-  const selectedTop = pickRandom(tops);
-  const selectedBottom = pickRandom(bottoms);
-  const selectedFootwear = pickRandom(footwear);
+  const validPairs = sortPairsDeterministically(getValidTopBottomPairs(tops, bottoms));
 
-  // Optional items
-  const selectedAccessories = pickRandomAccessories(accessories);
-  const selectedOuterwear = outerwear.length ? pickRandom(outerwear) : null;
+  if (!validPairs.length) {
+    throw new ApiError(
+      400,
+      `No color-compatible '${normalizedTone}' outfit found for ${season}/${occasion}`
+    );
+  }
 
+  const selectedPair = validPairs[0];
+  const selectedFootwear = selectFootwear(footwear, selectedPair);
+  const selectedAccessories = selectAccessories(accessories);
+  const selectedOuterwear = selectOuterwear(outerwear, includeOuterwear);
   const now = new Date();
 
-  // 5️⃣ Save/Update Outfit Logic (Reused from standard generator)
   await Outfit.findOneAndUpdate(
     {
       owner: userId,
-      top: selectedTop._id,
-      bottom: selectedBottom._id,
+      top: selectedPair.top._id,
+      bottom: selectedPair.bottom._id,
     },
     {
       $set: {
         lastWornAt: now,
-        accessories: selectedAccessories.map(a => a._id),
-        footwear: selectedFootwear._id,
-        outerwear: selectedOuterwear ? selectedOuterwear._id : null
+        accessories: selectedAccessories.map((item) => item._id),
+        footwear: selectedFootwear?._id ?? null,
+        outerwear: selectedOuterwear?._id ?? null,
       },
     },
     {
@@ -199,11 +277,12 @@ export const generateToneBasedOutfit = async ({ userId, occasion, season, tone }
   );
 
   return {
-    top: selectedTop,
-    bottom: selectedBottom,
-    footwear: selectedFootwear,
-    outerwear: selectedOuterwear,
-    accessories: selectedAccessories,
-    note: `Generated based on ${tone} tone preference`,
+    ...buildOutfitPayload({
+      pair: selectedPair,
+      selectedFootwear,
+      selectedOuterwear,
+      selectedAccessories,
+    }),
+    note: `Generated based on ${normalizedTone} tone preference`,
   };
 };

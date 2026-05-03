@@ -4,17 +4,47 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { generateOutfit, generateToneBasedOutfit } from "../services/outfit/outfitAssembler.service.js";
 import { Outfit } from "../models/outfit.model.js";
 
-const suggestOutfit = asyncHandler(async (req, res) => {
-  const { occasion, season } = req.body;
+const VALID_OCCASIONS = ["casual", "formal", "party"];
+const VALID_SEASONS = ["summer", "winter", "rainy"];
 
-  if (!occasion) {
+const normalizeOccasion = (occasion) => {
+  if (typeof occasion !== "string") {
     throw new ApiError(400, "Occasion is required");
   }
+
+  const normalizedOccasion = occasion.trim().toLowerCase();
+
+  if (!VALID_OCCASIONS.includes(normalizedOccasion)) {
+    throw new ApiError(400, "Occasion must be one of casual, formal, or party");
+  }
+
+  return normalizedOccasion;
+};
+
+const normalizeSeason = (season) => {
+  if (typeof season !== "string") {
+    throw new ApiError(400, "Season is required");
+  }
+
+  const normalizedSeason = season.trim().toLowerCase();
+
+  if (!VALID_SEASONS.includes(normalizedSeason)) {
+    throw new ApiError(400, "Season must be one of summer, winter, or rainy");
+  }
+
+  return normalizedSeason;
+};
+
+const suggestOutfit = asyncHandler(async (req, res) => {
+  const occasion = normalizeOccasion(req.body.occasion);
+  const season = normalizeSeason(req.body.season);
+  const includeOuterwear = req.body.includeOuterwear === true;
 
   const outfit = await generateOutfit({
     userId: req.user._id,
     occasion,
     season,
+    includeOuterwear,
   });
 
   return res
@@ -23,17 +53,21 @@ const suggestOutfit = asyncHandler(async (req, res) => {
 });
 
 const suggestToneBasedOutfit = asyncHandler(async (req, res) => {
-  const { occasion, season, tone } = req.body;
+  const occasion = normalizeOccasion(req.body.occasion);
+  const season = normalizeSeason(req.body.season);
+  const { tone } = req.body;
+  const includeOuterwear = req.body.includeOuterwear === true;
 
-  if (!occasion || !tone) {
-    throw new ApiError(400, "Occasion and Tone are required");
+  if (!tone) {
+    throw new ApiError(400, "Occasion, season and tone are required");
   }
 
   const outfit = await generateToneBasedOutfit({
     userId: req.user._id,
     occasion,
     season,
-    tone
+    tone,
+    includeOuterwear,
   });
 
   return res

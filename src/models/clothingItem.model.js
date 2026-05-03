@@ -39,15 +39,17 @@ const clothingItemSchema = new mongoose.Schema(
         enum: ["summer", "winter", "rainy"]
       }],
       required: true,
+      validate: {
+        validator: (value) => Array.isArray(value) && value.length > 0,
+        message: "Season must contain at least one value",
+      },
       index: true,
     },
 
     occasion: {
-      type: [{
-        type: String,
-        lowercase: true,
-        enum: ["casual", "formal", "party"]
-      }],
+      type: String,
+      lowercase: true,
+      enum: ["casual", "formal", "party"],
       required: true,
       index: true,
     },

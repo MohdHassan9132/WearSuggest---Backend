@@ -6,7 +6,6 @@ const sellerSchema = new mongoose.Schema(
 {
   name: {
     type: String,
-    required: true,
     trim: true
   },
 
@@ -23,18 +22,15 @@ const sellerSchema = new mongoose.Schema(
   },
 
   contactNumber: {
-    type: String,
-    required: true
+    type: String
   },
 
   source: {
-    type: String, // instagram, offline store, etc
-    required: true
+    type: String // instagram, offline store, etc
   },
 
   avatar: {
-    type: String,
-    required: true
+    type: String
   },
 
   refreshToken: {

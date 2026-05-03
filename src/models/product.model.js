@@ -53,12 +53,12 @@ const productSchema = new mongoose.Schema(
 
   imageURL: {
     type: String,
-    required: false
+    required: true
   },
 
   imagePublicId: {
     type: String,
-    required: false
+    required: true
   },
 
   isActive: {

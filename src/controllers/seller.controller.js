@@ -13,15 +13,9 @@ const options = {
 const registerSeller = asyncHandler(async (req, res) => {
     const { name, email, password, contactNumber, source } = req.body;
 
-    if (
-        [name, email, password, contactNumber, source].some(
-            (field) => field?.trim() === ""
-        )
-    ) {
-        throw new ApiError(400, "All fields are mandatory");
+    if (!email || !password) {
+        throw new ApiError(400, "Email and password are required");
     }
-
-    if (!req.file) throw new ApiError(400, "Avatar image is required");
 
     const Email = email.toLowerCase();
 
@@ -31,17 +25,20 @@ const registerSeller = asyncHandler(async (req, res) => {
         throw new ApiError(409, "Seller with this email already exists!");
     }
 
-    const avatar = await uploadOnCloudinary(req.file.path);
+    let avatarUrl = "";
 
-    if (!avatar) throw new ApiError(500, "Avatar upload failed");
+    if (req.file) {
+        const avatar = await uploadOnCloudinary(req.file.path);
+        avatarUrl = avatar?.secure_url || "";
+    }
 
     const seller = await Seller.create({
-        name,
         email: Email,
         password,
-        contactNumber,
-        source,
-        avatar: avatar.secure_url,
+        name: name || "",
+        contactNumber: contactNumber || "",
+        source: source || "",
+        avatar: avatarUrl,
     });
 
     const createdSeller = await Seller.findById(seller._id).select(

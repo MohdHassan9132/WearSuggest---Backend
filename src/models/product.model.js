@@ -51,19 +51,57 @@ const productSchema = new mongoose.Schema(
     }
   },
 
-  imageURL: {
-    type: String,
-    required: true
-  },
+  color: {
+type: String,
+required: true,
+lowercase: true,
+},
 
-  imagePublicId: {
-    type: String,
-    required: true
-  },
+colorGroup: {
+type: String,
+enum: ["neutral", "warm", "cool"],
+required: true,
+index: true,
+},
+
+season: [{
+type: String,
+lowercase: true,
+enum: ["summer", "winter", "rainy"]
+}],
+
+occasion: {
+type: String,
+lowercase: true,
+enum: ["casual", "formal", "party"],
+required: true,
+index: true,
+},
+
+
+  media: {
+productImages: [
+{
+url: String,
+publicId: String
+}
+],
+
+aiModelPreview: {
+url: String,
+publicId: String
+}
+},
+
 
   isActive: {
     type: Boolean,
     default: true
+  },
+
+  isPublished: {
+    type: Boolean,
+    default: false
   }
 
 },

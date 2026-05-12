@@ -7,6 +7,9 @@ import {
     deleteFromCloudinary,
     uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import { generateClothingMetadata } from "../services/ai/tagging.service.js";
+import { COLOR_GROUP_MAP } from "../constants/colors.js";
+import fs from "fs";
 
 const parseFitData = (fitData) => {
     if (typeof fitData === "string") {
@@ -20,13 +23,65 @@ const parseFitData = (fitData) => {
     return fitData;
 };
 
-const parseIsActive = (isActive) => {
-    if (typeof isActive === "undefined") return undefined;
-    if (typeof isActive === "boolean") return isActive;
-    if (isActive === "true") return true;
-    if (isActive === "false") return false;
+const parseSeason = (season) => {
+    if (typeof season === "string") {
+        try {
+            const parsed = JSON.parse(season);
+            if (Array.isArray(parsed)) {
+                return parsed;
+            }
+            throw new ApiError(400, "Season must be an array");
+        } catch (error) {
+            throw new ApiError(400, "Invalid season format");
+        }
+    }
+    
+    if (Array.isArray(season)) {
+        return season;
+    }
+    
+    if (typeof season === "undefined") return undefined;
+    
+    throw new ApiError(400, "Season must be an array");
+};
 
-    throw new ApiError(400, "isActive must be a boolean value");
+const parseBoolean = (value, fieldName) => {
+    if (typeof value === "undefined") return undefined;
+    if (typeof value === "boolean") return value;
+    if (value === "true") return true;
+    if (value === "false") return false;
+
+    throw new ApiError(400, `${fieldName} must be a boolean value`);
+};
+
+const parseIsActive = (isActive) => {
+    return parseBoolean(isActive, "isActive");
+};
+
+const parseIsPublished = (isPublished) => {
+    return parseBoolean(isPublished, "isPublished");
+};
+
+const ANALYZE_TYPE_MAP = {
+    top: "upper",
+    bottom: "lower",
+    outerwear: "outerwear",
+    footwear: "footwear",
+};
+
+const normalizeAnalyzedProductType = (type) => {
+    const normalizedType = ANALYZE_TYPE_MAP[type];
+
+    if (!normalizedType) {
+        throw new ApiError(400, `Unsupported analyzed product type: ${type}`);
+    }
+
+    return normalizedType;
+};
+
+const productVisibilityQuery = {
+    isActive: true,
+    $or: [{ isPublished: true }, { isPublished: { $exists: false } }],
 };
 
 const validateFitData = (type, fitData) => {
@@ -73,22 +128,22 @@ const validateFitData = (type, fitData) => {
         return;
     }
     if (type === "outerwear") {
-    if (!hasUpper) {
-        throw new ApiError(
-            400,
-            "For type 'outerwear', only fitData.upper is allowed"
-        );
-    }
+        if (!hasUpper) {
+            throw new ApiError(
+                400,
+                "For type 'outerwear', only fitData.upper is allowed"
+            );
+        }
 
-    if (hasLowerSection || hasFootwearSection) {
-        throw new ApiError(
-            400,
-            "For type 'outerwear', fitData.lower and fitData.footwear are not allowed"
-        );
-    }
+        if (hasLowerSection || hasFootwearSection) {
+            throw new ApiError(
+                400,
+                "For type 'outerwear', fitData.lower and fitData.footwear are not allowed"
+            );
+        }
 
-    return;
-}
+        return;
+    }
 
     if (type === "lower") {
         if (!hasLower) {
@@ -129,29 +184,122 @@ const validateFitData = (type, fitData) => {
     throw new ApiError(400, "Invalid product type");
 };
 
+const analyzeProductImage = asyncHandler(async (req, res) => {
+    if (!req.file) throw new ApiError(400, "Image is required for analysis");
+
+    try {
+        const imageBuffer = fs.readFileSync(req.file.path);
+        const aiMetadata = await generateClothingMetadata(imageBuffer, req.file.mimetype);
+
+        if (!aiMetadata) {
+            throw new ApiError(500, "Failed to analyze image");
+        }
+
+        const normalizedType = normalizeAnalyzedProductType(aiMetadata.type);
+
+        if (req.file.path) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                {
+                    category: aiMetadata.category,
+                    type: normalizedType,
+                    color: aiMetadata.color,
+                    season: aiMetadata.season,
+                    occasion: aiMetadata.occasion,
+                },
+                "Image analyzed successfully"
+            )
+        );
+    } catch (error) {
+        console.error("Product AI Analysis Failed:", error);
+
+        if (req.file?.path && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+
+        throw error instanceof ApiError ? error : new ApiError(503, "AI analysis failed");
+    }
+});
+
+const uploadMultipleImages = async (files) => {
+    if (!files || files.length === 0) {
+        return [];
+    }
+
+    const uploadPromises = files.map(async (file) => {
+        const uploadResult = await uploadOnCloudinary(file.path);
+        if (!uploadResult) {
+            throw new ApiError(500, `Failed to upload image: ${file.originalname}`);
+        }
+        return {
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+        };
+    });
+
+    return await Promise.all(uploadPromises);
+};
+
+const deleteMultipleImages = async (images) => {
+    if (!images || images.length === 0) return;
+    
+    const deletePromises = images.map(async (image) => {
+        if (image.publicId) {
+            await deleteFromCloudinary(image.publicId, "image");
+        }
+    });
+    
+    await Promise.all(deletePromises);
+};
+
 const addProduct = asyncHandler(async (req, res) => {
-    const { type, category } = req.body;
+    const { type, category, color, colorGroup, occasion } = req.body;
     const fitData = parseFitData(req.body.fitData);
+    const season = parseSeason(req.body.season);
+    const isPublished = parseIsPublished(req.body.isPublished);
+    
+    const productImages = req.files?.productImages || [];
 
-    if (!req.file) throw new ApiError(400, "Image is required");
+    // Validate required fields
+    if (!req.files || !req.files.productImages || productImages.length === 0) {
+        throw new ApiError(400, "At least one product image is required");
+    }
 
-    if (!type || !category || !fitData) {
-        throw new ApiError(400, "Type, category and fitData are required");
+    if (!type || !category || !fitData || !color || !colorGroup || !occasion) {
+        throw new ApiError(400, "Type, category, fitData, color, colorGroup, and occasion are required");
     }
 
     validateFitData(type, fitData);
 
-    const uploadResult = await uploadOnCloudinary(req.file.path);
+    const normalizedColor = color.toLowerCase();
+    const normalizedColorGroup = colorGroup || COLOR_GROUP_MAP[normalizedColor];
 
-    if (!uploadResult) throw new ApiError(500, "Image upload failed");
+    if (!normalizedColorGroup) {
+        throw new ApiError(400, `Unsupported color: ${color}`);
+    }
+
+    // Upload all product images
+    const uploadedImages = await uploadMultipleImages(productImages);
 
     const product = await Product.create({
         seller: req.user._id,
         type,
         category,
         fitData,
-        imageURL: uploadResult.secure_url,
-        imagePublicId: uploadResult.public_id,
+        color: normalizedColor,
+        colorGroup: normalizedColorGroup,
+        occasion,
+        season: season || [],
+        media: {
+            productImages: uploadedImages,
+            aiModelPreview: null // Will be generated by AI pipeline
+        },
+        isActive: true,
+        isPublished: isPublished ?? false
     });
 
     return res
@@ -161,12 +309,16 @@ const addProduct = asyncHandler(async (req, res) => {
 
 const updateProductById = asyncHandler(async (req, res) => {
     const { productId } = req.params;
-    const { category, type, seller } = req.body;
+    const { category, type, seller, color, colorGroup, occasion } = req.body;
     const fitData =
         typeof req.body.fitData === "undefined"
             ? undefined
             : parseFitData(req.body.fitData);
+    const season = typeof req.body.season === "undefined"
+        ? undefined
+        : parseSeason(req.body.season);
     const isActive = parseIsActive(req.body.isActive);
+    const isPublished = parseIsPublished(req.body.isPublished);
 
     if (!mongoose.Types.ObjectId.isValid(productId)) {
         throw new ApiError(400, "Invalid product id");
@@ -187,28 +339,45 @@ const updateProductById = asyncHandler(async (req, res) => {
 
     if (!product) throw new ApiError(404, "Product not found");
 
+    // Update fitData if provided
     if (fitData !== undefined) {
         validateFitData(product.type, fitData);
         product.fitData = fitData;
     }
 
+    // Update basic fields if provided
+    if (color !== undefined) product.color = color;
+    if (colorGroup !== undefined) product.colorGroup = colorGroup;
+    if (occasion !== undefined) product.occasion = occasion;
+    if (season !== undefined) product.season = season;
+
+    // Update isActive if provided
     if (typeof isActive !== "undefined") {
         product.isActive = isActive;
     }
 
-    if (req.file) {
-        const uploadResult = await uploadOnCloudinary(req.file.path);
+    if (typeof isPublished !== "undefined") {
+        product.isPublished = isPublished;
+    }
 
-        if (!uploadResult) throw new ApiError(500, "Image upload failed");
-
-        const oldImagePublicId = product.imagePublicId;
-
-        product.imageURL = uploadResult.secure_url;
-        product.imagePublicId = uploadResult.public_id;
-
-        if (oldImagePublicId) {
-            await deleteFromCloudinary(oldImagePublicId, "image");
-        }
+    // Handle product images update
+    const newProductImages = req.files?.productImages || [];
+    
+    if (newProductImages.length > 0) {
+        // Delete old product images from Cloudinary
+        const oldProductImages = product.media?.productImages || [];
+        await deleteMultipleImages(oldProductImages);
+        
+        // Upload new product images
+        const uploadedImages = await uploadMultipleImages(newProductImages);
+        
+        // Update media object
+        product.media = {
+            ...product.media,
+            productImages: uploadedImages,
+            // Preserve aiModelPreview if it exists (will be generated by AI pipeline)
+            aiModelPreview: product.media?.aiModelPreview || null
+        };
     }
 
     await product.save();
@@ -219,7 +388,7 @@ const updateProductById = asyncHandler(async (req, res) => {
 });
 
 const getAllProducts = asyncHandler(async (req, res) => {
-    const products = await Product.find({ isActive: true })
+    const products = await Product.find(productVisibilityQuery)
         .populate("seller", "name email avatar contactNumber source")
         .sort({ createdAt: -1 });
 
@@ -237,7 +406,7 @@ const getProductById = asyncHandler(async (req, res) => {
 
     const product = await Product.findOne({
         _id: productId,
-        isActive: true,
+        ...productVisibilityQuery,
     }).populate("seller", "name email avatar contactNumber source");
 
     if (!product) throw new ApiError(404, "Product not found");
@@ -252,7 +421,7 @@ const getProductsByCategory = asyncHandler(async (req, res) => {
 
     const products = await Product.find({
         category,
-        isActive: true,
+        ...productVisibilityQuery,
     })
         .populate("seller", "name email avatar contactNumber source")
         .sort({ createdAt: -1 });
@@ -296,6 +465,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
 export {
     addProduct,
+    analyzeProductImage,
     updateProductById,
     getAllProducts,
     getProductById,

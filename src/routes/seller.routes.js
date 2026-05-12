@@ -1,6 +1,8 @@
 import { Router } from "express";
 import {
     getCurrentSeller,
+    instagramCallbackSeller,
+    instagramLoginSeller,
     loginSeller,
     logoutSeller,
     refreshAccessToken,
@@ -13,6 +15,8 @@ const sellerRouter = Router();
 
 sellerRouter.route("/register-seller").post(upload.single("avatar"), registerSeller);
 sellerRouter.route("/login-seller").post(loginSeller);
+sellerRouter.route("/instagram/login").get(instagramLoginSeller);
+sellerRouter.route("/instagram/callback").get(instagramCallbackSeller);
 sellerRouter.route("/logout-seller").post(JWTVerify, verifySeller, logoutSeller);
 sellerRouter.route("/refresh-access-token").post(refreshAccessToken);
 sellerRouter

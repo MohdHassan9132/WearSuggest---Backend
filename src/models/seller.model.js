@@ -11,14 +11,14 @@ const sellerSchema = new mongoose.Schema(
 
   email: {
     type: String,
-    required: true,
+    trim: true,
     unique: true,
-    lowercase: true
+    lowercase: true,
+    sparse: true
   },
 
   password: {
-    type: String,
-    required: true
+    type: String
   },
 
   contactNumber: {
@@ -35,6 +35,29 @@ const sellerSchema = new mongoose.Schema(
 
   refreshToken: {
     type: String
+  },
+  instagramId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+
+  igAccessToken: {
+    type: String
+  },
+
+  igTokenExpiresAt: {
+    type: Date
+  },
+
+  instagramUsername: {
+    type: String,
+    trim: true
+  },
+
+  instagramConnected: {
+    type: Boolean,
+    default: false
   }
 
 },
@@ -42,12 +65,13 @@ const sellerSchema = new mongoose.Schema(
 );
 
 sellerSchema.pre("save", async function () {
-  if (this.isModified("password")) {
+  if (this.isModified("password") && this.password) {
     this.password = await bcrypt.hash(this.password, 10);
   }
 });
 
 sellerSchema.methods.isPasswordCorrect = async function (password) {
+  if (!this.password) return false;
   return await bcrypt.compare(password, this.password);
 };
 

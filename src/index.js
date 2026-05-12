@@ -1,11 +1,12 @@
-// import dotenv from "dotenv";
-// dotenv.config();
+import "dotenv/config";
 import db_connection from "./db/index.js";
 import { app } from "./app.js";
+import { startInstagramTokenCron } from "./scripts/instagramTokenCron.js";
 
 db_connection()
     .then(() => {
-        app.listen(process.env.PORT || 5000, () => {
+        startInstagramTokenCron();
+        app.listen(process.env.PORT || 3000, () => {
             console.log(`The app is running on port: ${process.env.PORT}`);
         });
     })

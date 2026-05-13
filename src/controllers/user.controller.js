@@ -3,12 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
-const options = {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None"//for production only in local host should be lax
-    
-};
+import { cookieOptions } from "../config/cookie.js";
+import { env } from "../config/env.js";
 
 const registerUser = asyncHandler(async (req, res) => {
     // get user details from frontend
@@ -117,8 +113,8 @@ const loginUser = asyncHandler(async (req, res) => {
 
         return res
             .status(200)
-            .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
+            .cookie("accessToken", accessToken, cookieOptions)
+            .cookie("refreshToken", refreshToken, cookieOptions)
             .json(
                 new ApiResponse(
                     200,
@@ -148,8 +144,8 @@ const logoutUser = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
+        .clearCookie("accessToken", cookieOptions)
+        .clearCookie("refreshToken", cookieOptions)
         .json(new ApiResponse(200, {}, "User was logged out successfully! "));
 });
 
@@ -162,7 +158,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     const decodedToken = jwt.verify(
         incomingRefreshToken,
-        process.env.REFRESH_TOKEN_SECRET
+        env.REFRESH_TOKEN_SECRET
     );
 
     const user = await User.findById(decodedToken._id);
@@ -182,8 +178,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
+        .cookie("accessToken", accessToken, cookieOptions)
+        .cookie("refreshToken", refreshToken, cookieOptions)
         .json(
             new ApiResponse(
                 200,

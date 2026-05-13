@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 
 const sellerSchema = new mongoose.Schema(
 {
@@ -78,16 +79,16 @@ sellerSchema.methods.isPasswordCorrect = async function (password) {
 sellerSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     { _id: this._id, email: this.email, role: "seller" },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+    env.ACCESS_TOKEN_SECRET,
+    { expiresIn: env.ACCESS_TOKEN_EXPIRY }
   );
 };
 
 sellerSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     { _id: this._id },
-    process.env.REFRESH_TOKEN_SECRET,
-    { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
+    env.REFRESH_TOKEN_SECRET,
+    { expiresIn: env.REFRESH_TOKEN_EXPIRY }
   );
 };
 

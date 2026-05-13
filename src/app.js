@@ -3,15 +3,11 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { corsOptions } from "./config/cors.js";
 const app = express();
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
-
-}));
+app.use(cors(corsOptions));
+console.log(corsOptions.origin)
 
 
 app.use(express.json({ limit: "16kb" }));

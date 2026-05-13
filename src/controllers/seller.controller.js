@@ -6,18 +6,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Seller } from "../models/seller.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-
-const options = {
-    httpOnly: true,
-    secure: true,
-};
-
-const stateCookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 15 * 60 * 1000,
-};
+import { cookieOptions, stateCookieOptions } from "../config/cookie.js";
+import { env } from "../config/env.js";
 
 // Helper function to log Instagram API errors consistently
 const logInstagramError = (label, error) => {
@@ -41,7 +31,7 @@ const logInstagramError = (label, error) => {
 };
 
 const getFrontendBrandLoginUrl = (message = "") => {
-    const loginUrl = new URL("/brand-login", process.env.FRONTEND_URL);
+    const loginUrl = new URL("/brand-login", env.FRONTEND_URL);
 
     if (message) {
         loginUrl.searchParams.set("instagram_error", message);
@@ -51,7 +41,7 @@ const getFrontendBrandLoginUrl = (message = "") => {
 };
 
 const getFrontendBrandDashboardUrl = () => {
-    const dashboardUrl = new URL("/brand-dashboard", process.env.FRONTEND_URL);
+    const dashboardUrl = new URL("/brand-dashboard", env.FRONTEND_URL);
     dashboardUrl.searchParams.set("instagram", "connected");
     return dashboardUrl.toString();
 };
@@ -73,10 +63,10 @@ const getInstagramTokenExpiryDate = (expiresIn) => {
 const getInstagramAuthUrl = (state) => {
     const instagramAuthUrl = new URL("https://www.instagram.com/oauth/authorize");
 
-    instagramAuthUrl.searchParams.set("client_id", process.env.INSTAGRAM_CLIENT_ID);
+    instagramAuthUrl.searchParams.set("client_id", env.INSTAGRAM_CLIENT_ID);
     instagramAuthUrl.searchParams.set(
         "redirect_uri",
-        process.env.INSTAGRAM_REDIRECT_URI
+        env.INSTAGRAM_REDIRECT_URI
     );
     instagramAuthUrl.searchParams.set("response_type", "code");
     instagramAuthUrl.searchParams.set("scope","instagram_business_basic");
@@ -88,18 +78,18 @@ const getInstagramAuthUrl = (state) => {
 
 const exchangeCodeForShortLivedToken = async (code) => {
     console.log(`\n🟡 [1/5] exchangeCodeForShortLivedToken - START`);
-    console.log(`   Using redirect_uri: ${process.env.INSTAGRAM_REDIRECT_URI}`);
-    console.log(`   Using client_id: ${process.env.INSTAGRAM_CLIENT_ID?.slice(0, 8)}...`);
+    console.log(`   Using redirect_uri: ${env.INSTAGRAM_REDIRECT_URI}`);
+    console.log(`   Using client_id: ${env.INSTAGRAM_CLIENT_ID?.slice(0, 8)}...`);
     console.log(`   Code first 12 chars: ${code?.slice(0, 12)}...`);
     
     try {
         const response = await axios.post(
             "https://api.instagram.com/oauth/access_token",
             new URLSearchParams({
-                client_id: process.env.INSTAGRAM_CLIENT_ID,
-                client_secret: process.env.INSTAGRAM_CLIENT_SECRET,
+                client_id: env.INSTAGRAM_CLIENT_ID,
+                client_secret: env.INSTAGRAM_CLIENT_SECRET,
                 grant_type: "authorization_code",
-                redirect_uri: process.env.INSTAGRAM_REDIRECT_URI,
+                redirect_uri: env.INSTAGRAM_REDIRECT_URI,
                 code,
             }).toString(),
             {
@@ -129,7 +119,7 @@ const exchangeShortLivedForLongLivedToken = async (shortLivedToken) => {
         const response = await axios.get("https://graph.instagram.com/access_token", {
             params: {
                 grant_type: "ig_exchange_token",
-                client_secret: process.env.INSTAGRAM_CLIENT_SECRET,
+                client_secret: env.INSTAGRAM_CLIENT_SECRET,
                 access_token: shortLivedToken,
             },
         });
@@ -254,8 +244,8 @@ const loginSeller = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
+        .cookie("sellerAccessToken", accessToken, cookieOptions)
+        .cookie("sellerRefreshToken", refreshToken, cookieOptions)
         .json(
             new ApiResponse(
                 200,
@@ -274,18 +264,18 @@ const instagramLoginSeller = asyncHandler(async (req, res) => {
     console.log("📋 Checking environment variables...");
     
     // Log environment variables status (but not full secrets)
-    console.log(`   INSTAGRAM_CLIENT_ID exists: ${!!process.env.INSTAGRAM_CLIENT_ID}`);
-    if (process.env.INSTAGRAM_CLIENT_ID) {
-        console.log(`   INSTAGRAM_CLIENT_ID first 8 chars: ${process.env.INSTAGRAM_CLIENT_ID.slice(0, 8)}...`);
+    console.log(`   INSTAGRAM_CLIENT_ID exists: ${!!env.INSTAGRAM_CLIENT_ID}`);
+    if (env.INSTAGRAM_CLIENT_ID) {
+        console.log(`   INSTAGRAM_CLIENT_ID first 8 chars: ${env.INSTAGRAM_CLIENT_ID.slice(0, 8)}...`);
     }
     
-    console.log(`   INSTAGRAM_CLIENT_SECRET exists: ${!!process.env.INSTAGRAM_CLIENT_SECRET}`);
-    console.log(`   INSTAGRAM_REDIRECT_URI: ${process.env.INSTAGRAM_REDIRECT_URI}`);
+    console.log(`   INSTAGRAM_CLIENT_SECRET exists: ${!!env.INSTAGRAM_CLIENT_SECRET}`);
+    console.log(`   INSTAGRAM_REDIRECT_URI: ${env.INSTAGRAM_REDIRECT_URI}`);
     
     if (
-        !process.env.INSTAGRAM_CLIENT_ID ||
-        !process.env.INSTAGRAM_CLIENT_SECRET ||
-        !process.env.INSTAGRAM_REDIRECT_URI
+        !env.INSTAGRAM_CLIENT_ID ||
+        !env.INSTAGRAM_CLIENT_SECRET ||
+        !env.INSTAGRAM_REDIRECT_URI
     ) {
         console.error("❌ Missing Instagram OAuth environment variables!");
         throw new ApiError(500, "Instagram OAuth env variables are missing");
@@ -430,8 +420,8 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
         console.log("🍪 Clearing OAuth state cookie, setting auth cookies, and redirecting to dashboard...");
         return res
             .clearCookie("instagramOAuthState", stateCookieOptions)
-            .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
+            .cookie("sellerAccessToken", accessToken, cookieOptions)
+            .cookie("sellerRefreshToken", refreshToken, cookieOptions)
             .redirect(getFrontendBrandDashboardUrl());
             
     } catch (instagramError) {
@@ -466,8 +456,8 @@ const logoutSeller = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
+        .clearCookie("sellerAccessToken", cookieOptions)
+        .clearCookie("sellerRefreshToken", cookieOptions)
         .json(new ApiResponse(200, {}, "Seller was logged out successfully! "));
 });
 
@@ -489,13 +479,13 @@ const getCurrentSeller = asyncHandler(async (req, res) => {
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken =
-        req.cookies.refreshToken || req.body.refreshToken;
+        req.cookies.sellerRefreshToken || req.body.refreshToken;
 
     if (!incomingRefreshToken) throw new ApiError(401, "Unauthorized Request");
 
     const decodedToken = jwt.verify(
         incomingRefreshToken,
-        process.env.REFRESH_TOKEN_SECRET
+        env.REFRESH_TOKEN_SECRET
     );
 
     const seller = await Seller.findById(decodedToken._id);
@@ -510,12 +500,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const refreshToken = seller.generateRefreshToken();
 
     seller.refreshToken = refreshToken;
-    seller.save({ validateBeforeSave: false });
+    await seller.save({ validateBeforeSave: false });
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
+        .cookie("sellerAccessToken", accessToken, cookieOptions)
+        .cookie("sellerRefreshToken", refreshToken, cookieOptions)
         .json(
             new ApiResponse(
                 200,

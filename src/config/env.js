@@ -1,0 +1,20 @@
+export const env = {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    FRONTEND_URL: process.env.FRONTEND_URL,
+    ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
+    REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET,
+    ACCESS_TOKEN_EXPIRY: process.env.ACCESS_TOKEN_EXPIRY,
+    REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY,
+    INSTAGRAM_CLIENT_ID: process.env.INSTAGRAM_CLIENT_ID,
+    INSTAGRAM_CLIENT_SECRET: process.env.INSTAGRAM_CLIENT_SECRET,
+    INSTAGRAM_REDIRECT_URI: process.env.INSTAGRAM_REDIRECT_URI,
+    DB_URL: process.env.DB_URL,
+    DB_NAME: process.env.DB_NAME,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    CLOUDINARY: {
+        CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+        API_KEY: process.env.CLOUDINARY_API_KEY,
+        API_SECRET: process.env.CLOUDINARY_API_SECRET,
+    },
+};

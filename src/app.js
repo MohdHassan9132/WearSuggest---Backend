@@ -4,10 +4,12 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { corsOptions } from "./config/cors.js";
+import { env } from "./config/env.js";
 const app = express();
 
 app.use(cors(corsOptions));
 console.log(corsOptions.origin)
+console.log(env.NODE_ENV)
 
 
 app.use(express.json({ limit: "16kb" }));

@@ -7,14 +7,15 @@ import { env } from "../config/env.js";
 
 const verifyTokenAndGetEntity = async (req) => {
     const token =
-        req.cookies?.accessToken ||
-        req.cookies?.sellerAccessToken ||
+        req?.cookies?.accessToken ||
+        req?.cookies?.sellerAccessToken ||
         req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) throw new ApiError(401, "Unauthorized Request!");
 
     try {
         const decodedToken = jwt.verify(token, env.ACCESS_TOKEN_SECRET);
+        console.log(decodedToken);
         let authenticatedEntity;
 
         if (decodedToken?.role === "user") {
@@ -58,6 +59,7 @@ const verifySellerTokenAndGetEntity = async (req) => {
         if (decodedToken?.role !== "seller") {
             throw new ApiError(403, "Seller access only");
         }
+
 
         const authenticatedSeller = await Seller.findById(decodedToken?._id).select(
             "-password -refreshToken"

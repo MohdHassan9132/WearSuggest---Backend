@@ -479,7 +479,7 @@ const getCurrentSeller = asyncHandler(async (req, res) => {
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken =
-        req.cookies.sellerRefreshToken || req.body.refreshToken;
+        req?.cookies?.sellerRefreshToken || req?.body?.refreshToken;
 
     if (!incomingRefreshToken) throw new ApiError(401, "Unauthorized Request");
 

@@ -69,7 +69,10 @@ const getInstagramAuthUrl = (state) => {
         env.INSTAGRAM_REDIRECT_URI
     );
     instagramAuthUrl.searchParams.set("response_type", "code");
-    instagramAuthUrl.searchParams.set("scope","instagram_business_basic");
+    instagramAuthUrl.searchParams.set(
+        "scope",
+        "instagram_business_basic,instagram_business_content_publish"
+    );
     instagramAuthUrl.searchParams.set("force_reauth", "true");
     instagramAuthUrl.searchParams.set("state", state);
 

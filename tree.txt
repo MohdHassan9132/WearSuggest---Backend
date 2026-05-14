@@ -1,0 +1,69 @@
+
+```
+WearSuggest---Backend
+├─ .prettierignore
+├─ .prettierrc
+├─ package-lock.json
+├─ package.json
+├─ public
+│  └─ temp
+├─ Readme.md
+└─ src
+   ├─ app.js
+   ├─ config
+   │  ├─ cookie.js
+   │  ├─ cors.js
+   │  └─ env.js
+   ├─ constants
+   │  ├─ clothingTypes.js
+   │  ├─ colors.js
+   │  ├─ occasions.js
+   │  └─ seasons.js
+   ├─ controllers
+   │  ├─ clothingItem.controller.js
+   │  ├─ fit.controller.js
+   │  ├─ product.controller.js
+   │  ├─ seller.controller.js
+   │  ├─ user.controller.js
+   │  └─ virtualTryOn.controller.js
+   ├─ db
+   │  └─ index.js
+   ├─ index.js
+   ├─ middleware
+   │  ├─ auth.middleware.js
+   │  ├─ multer.middleware.js
+   │  └─ rateLimit.middleware.js
+   ├─ models
+   │  ├─ clothingItem.model.js
+   │  ├─ post.controller.js
+   │  ├─ product.model.js
+   │  ├─ seller.model.js
+   │  ├─ subscription.model.js
+   │  ├─ user.model.js
+   │  └─ virtualTryOn.model.js
+   ├─ rules
+   │  └─ color.rules.js
+   ├─ scripts
+   │  ├─ checkKlingBalance.js
+   │  ├─ instagramTokenCron.js
+   │  ├─ kling.js
+   │  ├─ listModels.js
+   │  └─ seedProducts.js
+   ├─ services
+   │  └─ ai
+   │     ├─ gemini.config.js
+   │     └─ tagging.service.js
+   └─ utils
+      ├─ ApiError.js
+      ├─ ApiResponse.js
+      ├─ AsyncHandler.js
+      ├─ cloudinary.js
+      ├─ fit
+      │  ├─ buildFitSummary.js
+      │  ├─ calculateFit.js
+      │  ├─ fitRules.js
+      │  ├─ footwearConverter.js
+      │  └─ formatFitResponse.js
+      └─ tryOnImageBuilder.js
+
+```

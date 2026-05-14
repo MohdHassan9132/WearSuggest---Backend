@@ -31,10 +31,12 @@ import virtualTryOnRoutes from './routes/virtualTryOn.routes.js'
 import sellerRoutes from "./routes/seller.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import fitRoutes from './routes/fit.routes.js'
+import postRouter from "./routes/post.routes.js";
 
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/sellers", sellerRoutes);
 app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/post", postRouter);
 app.use("/api/v1/clothing", clothingRoutes);
 app.use("/api/v1/outfit", outfitRoutes);
 app.use("/api/v1/virtual-try-on", virtualTryOnRoutes);

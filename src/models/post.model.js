@@ -4,7 +4,12 @@ const postSchema = new mongoose.Schema({
     sellerId:{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Seller",
-        required: true
+        required: true,
+        index: true
+    },
+    productId:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product"
     },
     type:{
         type: String,
@@ -23,7 +28,9 @@ const postSchema = new mongoose.Schema({
     },
     status:{
         type: String,
-        enum:["failed","published"]
+        enum:["processing","failed","published"],
+        default: "processing",
+        index: true
     },
     errorMessage:{
         type: String

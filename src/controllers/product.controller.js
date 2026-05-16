@@ -463,6 +463,44 @@ const deleteProduct = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "Product deleted successfully"));
 });
 
+const getSellerProducts = asyncHandler(async (req, res) => {
+    const { sellerId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(sellerId)) {
+        throw new ApiError(400, "Invalid seller id");
+    }
+
+    const authenticatedSellerId = req.user?._id?.toString();
+
+    if (!authenticatedSellerId || authenticatedSellerId !== sellerId) {
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                [],
+                "No products found"
+            )
+        );
+    }
+
+    const products = await Product.find({
+        seller: sellerId,
+        isActive: true,
+    })
+        .populate("seller", "name email avatar contactNumber source")
+        .lean()
+        .sort({ createdAt: -1 });
+
+    return res.status(200).json(
+        new ApiResponse(
+            200,
+            products,
+            products.length
+                ? "Seller products fetched successfully"
+                : "No products found"
+        )
+    );
+});
+
 export {
     addProduct,
     analyzeProductImage,
@@ -471,4 +509,5 @@ export {
     getProductById,
     getProductsByCategory,
     deleteProduct,
+    getSellerProducts
 };

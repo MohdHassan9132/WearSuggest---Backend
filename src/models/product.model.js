@@ -87,10 +87,12 @@ publicId: String
 }
 ],
 
-aiModelPreview: {
+aiModelPreview:[
+  { 
 url: String,
 publicId: String
-}
+  }
+]
 },
 
 

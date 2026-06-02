@@ -11,20 +11,16 @@ export const validateSubscriber = function(next) {
     }
 
     if (this.subscriberType === "User" && !hasUser) {
-        return next(
-            new Error(
+        return new Error(
                 "subscriberType User requires userId"
             )
-        );
     }
 
     if (this.subscriberType === "Seller" && !hasSeller) {
-        return next(
-            new Error(
+        return new Error(
                 "subscriberType Seller requires sellerId"
-            )
-        );
+            );
     }
 
-    next();
+    next;
 };

@@ -4,7 +4,6 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { VirtualTryOn } from "../models/virtualTryOn.model.js";
 import { Outfit } from "../models/outfit.model.js";
-import { generateKlingToken } from "../scripts/kling.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { buildTryOnPayload } from "../utils/tryOnImageBuilder.js";
 

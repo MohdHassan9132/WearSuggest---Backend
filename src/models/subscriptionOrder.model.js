@@ -14,7 +14,7 @@ const subscriptionOrderSchema = new mongoose.Schema({
 
     subscriberType: {
         type: String,
-        enum: ["Seller", "User"],
+        enum: ["SELLER", "USER"],
         required: true
     },
 
@@ -25,8 +25,7 @@ const subscriptionOrderSchema = new mongoose.Schema({
 
     tier: {
         type: String,
-        required: true,
-        enum: ["Tier1", "Tier2", "Tier3"]
+        required: true
     },
 
     paymentService: {
@@ -40,8 +39,18 @@ const subscriptionOrderSchema = new mongoose.Schema({
         unique: true,
         sparse: true
     },
+    paymentOrderId: {
+    type: String,
+    unique: true,
+    sparse: true
+    },
 
     paymentId: {
+        type: String,
+        sparse: true
+    },
+
+    paymentSignature: {
         type: String
     },
 
@@ -53,12 +62,12 @@ const subscriptionOrderSchema = new mongoose.Schema({
     paymentStatus: {
         type: String,
         enum: [
-            "Pending",
-            "Success",
-            "Failed",
-            "Refunded"
+            "created",
+            "success",
+            "failed",
+            "refunded"
         ],
-        default: "Pending"
+        default: "created"
     }
 
 }, { timestamps: true });

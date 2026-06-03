@@ -14,7 +14,7 @@ const subscriptionSchema = new mongoose.Schema({
 
     subscriberType: {
         type: String,
-        enum: ["Seller", "User"],
+        enum: ["SELLER", "USER"],
         required: true
     },
 

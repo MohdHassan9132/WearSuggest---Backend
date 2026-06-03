@@ -2,26 +2,31 @@ import express from "express";
 
 import {
     createSubscriptionOrder,
+    getCurrentPlan,
     verifyFrontendPayment,
-    verifyWebhook
 }
 from "../controllers/subscription.controller.js";
 
-import { verifyJWT }
-from "../middlewares/verifyJWT.js";
+import { JWTVerify }
+from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 router.post(
     "/create",
-    verifyJWT,
+    JWTVerify,
     createSubscriptionOrder
 );
 
 router.post(
     "/verify",
-    verifyJWT,
+    JWTVerify,
     verifyFrontendPayment
 );
 
+router.get(
+    "/current",
+    JWTVerify,
+    getCurrentPlan
+)
 export default router;

@@ -27,6 +27,9 @@ class SubscriptionRepository {
             }
         );
     }
+    async getSubscription(filter){
+        return await Subscription.findOne(filter).populate("latestOrderId")
+    }
 }
 
 export const subscriptionRepository =

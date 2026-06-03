@@ -2,19 +2,19 @@ import { ApiError }
 from "../../utils/ApiError.js";
 
 import { SUBSCRIPTION_PLANS }
-from "../../configs/subscriptionPlans.js";
+from "../../config/subscriptionPlans.js";
 
 import { razorpayService }
 from "../payment/razorpay.service.js";
 
 import { subscriptionOrderRepository }
-from "../../repositories/subscriptionOrder.repository.js";
+from "../../repositories/subscriptionOrder.respository.js";
 
 import { subscriptionRepository }
 from "../../repositories/subscription.repository.js";
 
 import { resolveSubscriberPayload }
-from "../../utils/roleResolver.js";
+from "../../utils/role.resolver.js";
 
 class SubscriptionService {
 
@@ -199,6 +199,18 @@ async verifyWebhook(req) {
         await order.save();
 
         await this.activateSubscription(order);
+    }
+    async getCurrentPlan({
+        role,
+        subscriberId
+    }) {
+        const filter = resolveSubscriberPayload({
+            role: role?.toUpperCase?.() || role,
+            subscriberId
+        });
+
+        return await subscriptionRepository
+            .getSubscription(filter);
     }
 }
 

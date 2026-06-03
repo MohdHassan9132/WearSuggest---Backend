@@ -1,5 +1,5 @@
 import { asyncHandler }
-from "../utils/asyncHandler.js";
+from "../utils/AsyncHandler.js";
 
 import { ApiResponse }
 from "../utils/ApiResponse.js";

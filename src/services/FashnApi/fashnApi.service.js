@@ -56,6 +56,31 @@ class FashnApiService {
 
         return data;
     }
+    async pollingStatus({
+        predictionId
+    }){
+        const response = await fetch(
+            `${this.baseUrl}/status/${predictionId}`,
+            {
+                method: "GET",
+                headers:{
+                    Authorization: `Bearer ${this.apiKey}`,
+                    "Content-Type": "application/json"
+                }
+            }
+        )
+        const data = await response.json()
+        console.log(data)
+        if(!response.ok){
+            throw new ApiError(
+                response.status
+                ,data.error
+                ||"FASHN request failed"
+            )
+        }
+        return data
+
+    }
     async createModel({//add validation and sanitation and add temp file clear on failure or success
         prompt,
         image,
@@ -81,11 +106,54 @@ class FashnApiService {
         const aiModelDoc = await aiModelRepository.createAiModelDoc({
             sellerId,
             serviceId: aiModel.id,
-            status: "PENDING",
+            status: aiModel.status || "starting",
             error: aiModel.error
         })
+        if(aiModel.error !== null){
+            throw new ApiError(500,"Internal Server Error")
+        }
         console.log("doc in db",aiModelDoc)
         return aiModelDoc
+    }
+    async pollingModel(serviceId,sellerId){//Add web socket polling once implemented gmail,notification
+        const modelDoc = await aiModelRepository.getModelByServiceId(serviceId,sellerId)
+        if(!modelDoc){
+            throw new ApiError(404,"Request not found")
+        }
+        if(modelDoc.status === "failed"){
+             throw new ApiError(
+                503,
+                "fash api failed",
+                [modelDoc.error]
+                )
+        }
+        if(modelDoc.status === "completed"){
+            return modelDoc
+        }
+        const statusDoc = await this.pollingStatus({predictionId: modelDoc.serviceId})
+        //failed
+        if(statusDoc.status ==='failed'){
+            const updatedModelDoc = await aiModelRepository.updateStatus(modelDoc._id,statusDoc.status,statusDoc.error,null)
+            throw new ApiError(
+                503,
+                "fash api failed",
+                [statusDoc.error]
+                )
+        }
+        //completed
+        if(statusDoc.status === 'completed'){
+            //upload to cdn ex cloudinary. create array for the modelMedia and updated
+            const updatedModelDoc = await aiModelRepository.updateStatus(modelDoc._id,statusDoc.status,statusDoc.error,"Array of the base64 images")
+            return updatedModelDoc
+        }
+        if(statusDoc.status === "starting" ||
+        statusDoc.status === "in_queue" ||
+        statusDoc.status === "processing" 
+        ){
+            return {status: statusDoc.status}
+        }
+
+
     }
 }
 

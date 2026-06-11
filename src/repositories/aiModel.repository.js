@@ -7,8 +7,17 @@ class AiModelRepository{
         console.log("from repo",modelDoc)
         return modelDoc
     }
-    async updateStatus(){
-        const modelDoc = await AIModel.findByIdAndUpdate({},{},{returnDocument: 'after'})
+    async updateStatus(modeldocId,status,error,ModelMedia){
+        const modelDoc = await AIModel.findByIdAndUpdate({_id: modeldocId},{
+            status,
+            error,
+            ModelMedia
+        },{returnDocument: 'after'})
+        return modelDoc
+    }
+    async getModelByServiceId(serviceId,sellerId){
+        const modelDoc = await AIModel.findOne({serviceId,sellerId})
+        return modelDoc
     }
 }
 

@@ -13,15 +13,16 @@ const aiModelSchema = new mongoose.Schema({
     status: {
     type: String,
     enum: [
-        "PENDING",
-        "PROCESSING",
-        "COMPLETED",
-        "FAILED"
+        "starting",
+        "in_queue",
+        'processing',
+        'completed',
+        'failed'
     ],
-    default: "PENDING"
+    default: "starting"
     },
     error: {
-        type: String,
+        type: Object,
         default: null
     },
     isPublic:{

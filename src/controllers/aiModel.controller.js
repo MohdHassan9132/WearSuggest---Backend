@@ -3,28 +3,36 @@ import {ApiResponse} from '../utils/ApiResponse.js'
 import {fashnApiService} from '../services/FashnApi/fashnApi.service.js'
 import {convertToBase64} from '../utils/base64Convertor.js'
 import { ApiError } from '../utils/ApiError.js'
+import fs from 'fs'
 
 const createModel = asyncHandler(async(req,res)=>{
     const {prompt,aspectRatio,noOfImages} = req.body
-    let image;
-    if(req?.file){
-        image = convertToBase64(req.file.path)
+    if(!req?.file){
+        throw new ApiError(400,"Face Reference image is required for model generation")
     }
-    const sellerId = req.user._id
-    const aiModel = await fashnApiService.createModel({
-        aspectRatio,
-        prompt,
-        noOfImages,
-        image,
-        sellerId
-    })
-    console.log("from controller",aiModel)
-    return res.status(200).json(new ApiResponse(201,aiModel,"aiModel Job Initiated"))
+    try {
+        const image = convertToBase64(req.file.path)
+        const sellerId = req.user._id
+        const aiModel = await fashnApiService.createModel({
+            aspectRatio,
+            prompt,
+            noOfImages,
+            image,
+            sellerId
+        })
+        console.log("from controller",aiModel)
+        return res.status(201).json(new ApiResponse(201,aiModel,"aiModel Job Initiated"))
+    }finally{
+        fs.unlinkSync(req.file.path)
+    }
 })
 
 const pollModel = asyncHandler(async(req,res)=>{
     
-    const {serviceId} = req.body
+    const {serviceId} = req.params
+    if(!serviceId){
+        throw new ApiError(400,"serviceId is required")
+    }
     const modelStatus = await fashnApiService.pollingModel(serviceId,req.user._id)
     if(modelStatus.status !== "completed"){
         return res.status(200).json(new ApiResponse(200,null,modelStatus.status))

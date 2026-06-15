@@ -121,6 +121,9 @@ from "./routes/post.routes.js";
 import subscriptionRoutes
 from "./routes/subscription.routes.js";
 
+import aiModelRouter
+from "./routes/aiModel.route.js";
+
 app.use("/api/v1/users", userRoutes);
 
 app.use("/api/v1/sellers", sellerRoutes);
@@ -144,5 +147,10 @@ app.use(
     "/api/v1/subscription",
     subscriptionRoutes
 );
+
+app.use(
+    "/api/v1/aiModel",
+    aiModelRouter
+)
 
 export { app };

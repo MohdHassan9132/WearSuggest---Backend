@@ -1,6 +1,9 @@
 import { env } from "../../config/env.js";
 import { aiModelRepository } from "../../repositories/aiModel.repository.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { validateNoOfImages } from "../../validators/noOfImages.validator.js";
+import {validatePrompt} from '../../validators/prompt.validator.js'
+import { validateAspectRatio } from "../../validators/aspectRatio.validator.js";
 
 const defaults = {
     resolution: '1k',
@@ -45,7 +48,6 @@ class FashnApiService {
 
         const data =
             await response.json();
-
         if (!response.ok) {
             throw new ApiError(
                 response.status,
@@ -84,34 +86,31 @@ class FashnApiService {
     async createModel({//add validation and sanitation and add temp file clear on failure or success
         prompt,
         image,
-        aspectRatio,
-        noOfImages,
+        aspectRatio = "1:1",
+        noOfImages = 1,
         sellerId,
     }){
+        const validatedNoOfImages = validateNoOfImages(noOfImages)
+        const validatedPrompt = validatePrompt(prompt)
+        const validatedAspectRatio = validateAspectRatio(aspectRatio)
         const aiModel = await this.runModel({
             modelName: 'model-create',
             inputs:{
-                prompt,
+                prompt: validatedPrompt,
                 image_reference: image,
-                aspect_ratio: aspectRatio,
-                num_images: noOfImages,
+                aspect_ratio: validatedAspectRatio,
+                num_images: validatedNoOfImages,
                 ...defaults
             }
         })
         console.log("from service",aiModel)
         //cdn upload in polling
-        if(!aiModel){
-            throw new ApiError(503,"Service Unavailable")
-        }
         const aiModelDoc = await aiModelRepository.createAiModelDoc({
             sellerId,
             serviceId: aiModel.id,
             status: aiModel.status || "starting",
             error: aiModel.error
         })
-        if(aiModel.error !== null){
-            throw new ApiError(500,"Internal Server Error")
-        }
         console.log("doc in db",aiModelDoc)
         return aiModelDoc
     }
@@ -130,8 +129,10 @@ class FashnApiService {
         if(modelDoc.status === "completed"){
             return modelDoc
         }
-        const statusDoc = await this.pollingStatus({predictionId: modelDoc.serviceId})
+        let statusDoc
+        statusDoc = await this.pollingStatus({predictionId: modelDoc.serviceId})
         //failed
+        console.log(statusDoc)
         if(statusDoc.status ==='failed'){
             const updatedModelDoc = await aiModelRepository.updateStatus(modelDoc._id,statusDoc.status,statusDoc.error,null)
             throw new ApiError(
@@ -143,7 +144,8 @@ class FashnApiService {
         //completed
         if(statusDoc.status === 'completed'){
             //upload to cdn ex cloudinary. create array for the modelMedia and updated
-            const updatedModelDoc = await aiModelRepository.updateStatus(modelDoc._id,statusDoc.status,statusDoc.error,"Array of the base64 images")
+            
+            const updatedModelDoc = await aiModelRepository.updateStatus(modelDoc._id,statusDoc.status,statusDoc.error,)
             return updatedModelDoc
         }
         if(statusDoc.status === "starting" ||

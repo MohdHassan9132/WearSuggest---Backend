@@ -1,3 +1,4 @@
+import { ApiError } from "../utils/ApiError.js"
 export const stringValidator = function(string){
     if(typeof string !== "string"){
         throw new ApiError(400,"Data type must be string")

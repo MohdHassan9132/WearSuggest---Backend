@@ -7,6 +7,7 @@ import fs from 'fs'
 
 const createModel = asyncHandler(async(req,res)=>{
     const {prompt,aspectRatio,noOfImages} = req.body
+    console.log("from controller",noOfImages)
     if(!req?.file){
         throw new ApiError(400,"Face Reference image is required for model generation")
     }

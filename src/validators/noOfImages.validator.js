@@ -1,4 +1,5 @@
 import { validateInteger } from "./number.validator.js";
+import { ApiError } from "../utils/ApiError.js";
 
 export const validateNoOfImages = (value) => {
     const count = validateInteger(

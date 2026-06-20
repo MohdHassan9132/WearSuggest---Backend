@@ -5,6 +5,8 @@ import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { cookieOptions } from "../config/cookie.js";
 import { env } from "../config/env.js";
+import {subscriptionRepository} from '../repositories/sellerSubscription.repository.js'
+import {SUBSCRIPTION_PLANS} from '../config/subscriptionPlans.js'
 
 const registerUser = asyncHandler(async (req, res) => {
     // get user details from frontend
@@ -62,7 +64,15 @@ const registerUser = asyncHandler(async (req, res) => {
             500,
             "Something went wrong during registering new user!"
         );
-
+    const subscription = await subscriptionRepository.activateSubscription({
+        filter:{
+            userId: createdUser._id,
+            subscriberType: "USER"
+        },
+        credits: SUBSCRIPTION_PLANS.USER.FREE.credits,
+        latestOrderId: null
+    })
+    console.log(subscription)
     return res
         .status(201)
         .json(

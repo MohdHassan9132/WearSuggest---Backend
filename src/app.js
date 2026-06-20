@@ -31,7 +31,7 @@ console.log(env.NODE_ENV);
 import {
     verifyWebhook
 }
-from "./controllers/subscription.controller.js";
+from "./controllers/sellerSubscription.controller.js";
 
 app.post(
     "/api/v1/subscription/webhook",
@@ -119,7 +119,7 @@ import postRouter
 from "./routes/post.routes.js";
 
 import subscriptionRoutes
-from "./routes/subscription.routes.js";
+from "./routes/sellerSubscription.routes.js"
 
 import aiModelRouter
 from "./routes/aiModel.route.js";

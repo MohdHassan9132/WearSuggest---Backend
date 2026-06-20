@@ -7,7 +7,7 @@ const sellerSchema = new mongoose.Schema(
 {
   name: {
     type: String,
-    trim: true
+    trim: true,
   },
 
   email: {
@@ -15,7 +15,8 @@ const sellerSchema = new mongoose.Schema(
     trim: true,
     unique: true,
     lowercase: true,
-    sparse: true
+    sparse: true,
+    required: true
   },
 
   password: {
@@ -30,7 +31,10 @@ const sellerSchema = new mongoose.Schema(
     type: String // instagram, offline store, etc
   },
 
-  avatar: {
+  avatarUrl:{
+    type: String
+  },
+  avatarPublicId:{
     type: String
   },
 

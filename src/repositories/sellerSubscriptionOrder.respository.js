@@ -1,5 +1,5 @@
 import { SubscriptionOrder }
-from "../models/subscriptionOrder.model.js";
+from "../models/sellerSubscriptionOrder.model.js";
 
 class SubscriptionOrderRepository {
 

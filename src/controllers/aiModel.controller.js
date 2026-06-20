@@ -5,7 +5,7 @@ import {convertToBase64} from '../utils/base64Convertor.js'
 import { ApiError } from '../utils/ApiError.js'
 import fs from 'fs'
 
-const createModel = asyncHandler(async(req,res)=>{
+const createFashnApiModel = asyncHandler(async(req,res)=>{
     const {prompt,aspectRatio,noOfImages} = req.body
     console.log("from controller",noOfImages)
     if(!req?.file){
@@ -28,7 +28,7 @@ const createModel = asyncHandler(async(req,res)=>{
     }
 })
 
-const pollModel = asyncHandler(async(req,res)=>{
+const pollFashnApiModel = asyncHandler(async(req,res)=>{
     
     const {serviceId} = req.params
     if(!serviceId){
@@ -57,4 +57,4 @@ const pollModel = asyncHandler(async(req,res)=>{
     // controllers, sockets, and background services.
 })
 
-export {createModel,pollModel}
+export {createFashnApiModel,pollFashnApiModel}

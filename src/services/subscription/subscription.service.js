@@ -8,10 +8,10 @@ import { razorpayService }
 from "../payment/razorpay.service.js";
 
 import { subscriptionOrderRepository }
-from "../../repositories/subscriptionOrder.respository.js";
+from "../../repositories/sellerSubscriptionOrder.respository.js";
 
 import { subscriptionRepository }
-from "../../repositories/subscription.repository.js";
+from "../../repositories/sellerSubscription.repository.js";
 
 import { resolveSubscriberPayload }
 from "../../utils/role.resolver.js";

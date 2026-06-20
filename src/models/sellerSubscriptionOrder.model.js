@@ -1,23 +1,11 @@
 import mongoose from "mongoose";
 import { validateSubscriber } from "../validators/subscription.validator.js";
 
-const subscriptionOrderSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-    },
-
+const sellerSubscriptionOrderSchema = new mongoose.Schema({
     sellerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Seller",
     },
-
-    subscriberType: {
-        type: String,
-        enum: ["SELLER", "USER"],
-        required: true
-    },
-
     credits: {
         type: Number,
         required: true
@@ -72,13 +60,8 @@ const subscriptionOrderSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-subscriptionOrderSchema.pre(
-    "validate",
-    validateSubscriber
-);
-
 export const SubscriptionOrder = mongoose.model(
-    "SubscriptionOrder",
-    subscriptionOrderSchema
+    "SellerSubscriptionOrder",
+    sellerSubscriptionOrderSchema
 );
 

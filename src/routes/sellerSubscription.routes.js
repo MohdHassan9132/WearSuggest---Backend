@@ -5,7 +5,7 @@ import {
     getCurrentPlan,
     verifyFrontendPayment,
 }
-from "../controllers/subscription.controller.js";
+from "../controllers/sellerSubscription.controller.js";
 
 import { JWTVerify }
 from "../middleware/auth.middleware.js";

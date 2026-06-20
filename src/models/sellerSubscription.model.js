@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { validateSubscriber } from "../validators/subscription.validator.js";
 
-const subscriptionSchema = new mongoose.Schema({
+const sellerSubscriptionSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
@@ -30,23 +30,18 @@ const subscriptionSchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-subscriptionSchema.pre(
-    "validate",
-    validateSubscriber
-);
-
-subscriptionSchema.index(
+sellerSubscriptionSchema.index(
     { userId: 1 },
     { unique: true, sparse: true }
 );
 
-subscriptionSchema.index(
+sellerSubscriptionSchema.index(
     { sellerId: 1 },
     { unique: true, sparse: true }
 );
 
-export const Subscription = mongoose.model(
-    "Subscription",
-    subscriptionSchema
+export const SellerSubscription = mongoose.model(
+    "SellerSubscription",
+    sellerSubscriptionSchema
 );
 

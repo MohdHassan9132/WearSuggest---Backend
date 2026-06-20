@@ -1,7 +1,13 @@
-import { Subscription }
-from "../models/subscirption.model.js";
+import { SellerSubscription }
+from "../models/sellerSubscription.model.js";
 
 class SubscriptionRepository {
+
+    async createSubscription(subscriberId,subscriberType){
+        const subscription = await Subscription.create({
+            
+        })
+    }
 
     async activateSubscription({
         filter,

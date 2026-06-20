@@ -4,10 +4,10 @@ import crypto from "crypto";
 import { asyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Seller } from "../models/seller.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { cookieOptions, stateCookieOptions } from "../config/cookie.js";
 import { env } from "../config/env.js";
+import {sellerService} from '../services/seller/seller.service.js'
+import fs from 'fs'
 
 // Helper function to log Instagram API errors consistently
 const logInstagramError = (label, error) => {
@@ -165,55 +165,26 @@ const getInstagramProfile = async (accessToken) => {
 
 const registerSeller = asyncHandler(async (req, res) => {
     const { name, email, password, contactNumber, source } = req.body;
-
-    if (!email || !password) {
-        throw new ApiError(400, "Email and password are required");
+    let avatarPath
+    try {
+        avatarPath = req.file?.path
+        const seller = await sellerService.registerSeller({
+            name,
+            email,
+            contactNumber,
+            source,
+            avatarPath,
+            password
+        })
+        return res.status(201).json(new ApiResponse(201,seller,"Seller registered successfully"))
+    } catch (error) {
+        console.log(error)
+        throw error
+    }finally{
+        if(avatarPath && fs.existsSync(avatarPath)){
+            fs.unlinkSync(avatarPath)
+        }
     }
-
-    const Email = email.toLowerCase();
-
-    const existingSeller = await Seller.findOne({ email: Email });
-
-    if (existingSeller) {
-        throw new ApiError(409, "Seller with this email already exists!");
-    }
-
-    let avatarUrl = "";
-
-    if (req.file) {
-        const avatar = await uploadOnCloudinary(req.file.path);
-        avatarUrl = avatar?.secure_url || "";
-    }
-
-    const seller = await Seller.create({
-        email: Email,
-        password,
-        name: name || "",
-        contactNumber: contactNumber || "",
-        source: source || "",
-        avatar: avatarUrl,
-    });
-
-    const createdSeller = await Seller.findById(seller._id).select(
-        "-password -refreshToken"
-    );
-
-    if (!createdSeller) {
-        throw new ApiError(
-            500,
-            "Something went wrong during registering new seller!"
-        );
-    }
-
-    return res
-        .status(201)
-        .json(
-            new ApiResponse(
-                200,
-                createdSeller,
-                "New seller registered successfully!"
-            )
-        );
 });
 
 const loginSeller = asyncHandler(async (req, res) => {

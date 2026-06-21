@@ -95,5 +95,16 @@ sellerSchema.methods.generateRefreshToken = function () {
     { expiresIn: env.REFRESH_TOKEN_EXPIRY }
   );
 };
+//instead of mapper can use this as well
+// sellerSchema.set("toJSON", {
+//     transform(doc, ret) {
+//         delete ret.password;
+//         delete ret.refreshToken;
+//         delete ret.igAccessToken;
+//         delete ret.avatarPublicId;
+
+//         return ret;
+//     }
+// });
 
 export const Seller = mongoose.model("Seller",sellerSchema)

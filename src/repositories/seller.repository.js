@@ -7,7 +7,7 @@ class SellerRepository{
 // obj[field] = value
 // Here [field] is evaluated and its value becomes the property name.
     async findSellerByField(field,fieldValue){
-        return await Seller.exists({
+        return await Seller.findOne({
             [field]: fieldValue,
         })
     }
@@ -20,7 +20,7 @@ class SellerRepository{
         avatarUrl,
         avatarPublicId,
     }){
-        const seller = await Seller.create({
+        return await Seller.create({
             name,
             email,
             password,
@@ -29,13 +29,6 @@ class SellerRepository{
             avatarUrl,
             avatarPublicId
         })
-        const safeSeller = seller.toObject()
-        delete safeSeller.avatarPublicId
-        delete safeSeller.refreshToken
-        delete safeSeller.password
-        delete safeSeller.igAccessToken
-        delete safeSeller.igTokenExpiresAt
-        return safeSeller
     }
 }
 

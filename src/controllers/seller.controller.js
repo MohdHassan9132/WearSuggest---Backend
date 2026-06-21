@@ -190,31 +190,14 @@ const registerSeller = asyncHandler(async (req, res) => {
 const loginSeller = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || email.trim() === "") {
-        throw new ApiError(400, "Email is required");
-    }
-
-    const Email = email.toLowerCase();
-
-    const seller = await Seller.findOne({ email: Email });
-
-    if (!seller) throw new ApiError(404, "Seller not found!");
-
-    if (!password || password.trim() === "") {
-        throw new ApiError(400, "Password is required");
-    }
-
-    const isPasswordValid = await seller.isPasswordCorrect(password);
-
-    if (!isPasswordValid) {
-        throw new ApiError(401, `Invalid Password for seller - ${Email}`);
-    }
-
-    const { accessToken, refreshToken } = await generateSellerTokens(seller);
-
-    const loggedInSeller = await Seller.findById(seller._id).select(
-        "-password -refreshToken"
-    );
+    const {
+        seller,
+        accessToken,
+        refreshToken,
+    } = await sellerService.loginSeller({
+        email,
+        password,
+    });
 
     return res
         .status(200)
@@ -224,7 +207,7 @@ const loginSeller = asyncHandler(async (req, res) => {
             new ApiResponse(
                 200,
                 {
-                    seller: loggedInSeller,
+                    seller,
                     accessToken,
                     refreshToken,
                 },

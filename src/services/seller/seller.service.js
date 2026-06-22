@@ -8,7 +8,7 @@ import {
     uploadOnCloudinary,
     deleteFromCloudinary,
 } from "../../utils/cloudinary.js";
-import {toSafeSeller} from '../../mappers/seller.mapper.js'
+import { toSafeSeller } from "../../mappers/seller.mapper.js";
 
 class SellerService {
     async registerSeller({
@@ -47,7 +47,7 @@ class SellerService {
                 avatarPublicId: avatar?.public_id || "",
                 source: validatedSource,
             });
-            const safeSeller = toSafeSeller(seller)
+            const safeSeller = toSafeSeller(seller);
             return safeSeller;
         } catch (error) {
             console.log(error);
@@ -59,7 +59,7 @@ class SellerService {
     }
     async loginSeller({ email, password }) {
         const validatedEmail = validateEmail(email);
-        const validatedPassword = validatePassword(password)
+        const validatedPassword = validatePassword(password);
         try {
             //remove the sensitive fields
             const seller = await sellerRepository.findSellerByField(
@@ -69,17 +69,17 @@ class SellerService {
             if (!seller) {
                 throw new ApiError(400, "Invalid Credentials");
             }
-            if (!await seller.isPasswordCorrect(validatedPassword)){
+            if (!(await seller.isPasswordCorrect(validatedPassword))) {
                 throw new ApiError(400, "Invalid Credentials");
             }
-            const {accessToken,refreshToken} = await this.generateSellerTokens(seller)
-            const safeSeller = toSafeSeller(seller)
-            return {seller: safeSeller,accessToken,refreshToken}
+            const { accessToken, refreshToken } =
+                await this.generateSellerTokens(seller);
+            const safeSeller = toSafeSeller(seller);
+            return { seller: safeSeller, accessToken, refreshToken };
         } catch (error) {
-            console.log(error)
-            throw error
+            console.log(error);
+            throw error;
         }
-
     }
     async generateSellerTokens(seller) {
         const accessToken = await seller.generateAccessToken();
@@ -87,6 +87,18 @@ class SellerService {
         seller.refreshToken = refreshToken;
         await seller.save({ validateBeforeSave: false });
         return { accessToken, refreshToken };
+    }
+    async logoutSeller(id) {
+        const seller = await sellerRepository.updateSellerById({
+            id,
+            fields: {
+                refreshToken: undefined,
+            },
+        });
+        if(!seller){
+            throw new ApiError(404,"Seller not found")
+        }
+        return true
     }
 }
 

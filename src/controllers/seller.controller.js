@@ -399,18 +399,7 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
 });
 
 const logoutSeller = asyncHandler(async (req, res) => {
-    await Seller.findByIdAndUpdate(
-        req.user._id,
-        {
-            $set: {
-                refreshToken: undefined,
-            },
-        },
-        {
-            new: true,
-        }
-    );
-
+    await sellerService.logoutSeller(req.user._id)
     return res
         .status(200)
         .clearCookie("sellerAccessToken", cookieOptions)

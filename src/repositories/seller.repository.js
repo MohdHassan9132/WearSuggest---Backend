@@ -30,6 +30,21 @@ class SellerRepository{
             avatarPublicId
         })
     }
+    async updateSellerById({
+        id,
+        fields,
+    }){
+        const seller = await Seller.findByIdAndUpdate(
+            id,
+            {
+                $set:{
+                    ...fields
+                }
+            },
+            {returnDocument: "after"}
+        )
+        return seller
+    }
 }
 
 export const sellerRepository = new SellerRepository()

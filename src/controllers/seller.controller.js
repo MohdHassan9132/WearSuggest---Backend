@@ -408,9 +408,7 @@ const logoutSeller = asyncHandler(async (req, res) => {
 });
 
 const getCurrentSeller = asyncHandler(async (req, res) => {
-    const currentSeller = req.user?.toObject();
-
-    if (!currentSeller) throw new ApiError(404, "Seller not found");
+   const currentSeller = await sellerService.getCurrentSeller(req.user._id)
 
     return res
         .status(200)

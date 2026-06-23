@@ -100,6 +100,14 @@ class SellerService {
         }
         return true
     }
+    async getCurrentSeller(id){
+        const seller = await sellerRepository.findSellerByField("_id",id)
+        if(!seller){
+            throw new ApiError(404,"Seller Not found")
+        }
+        const safeSeller = toSafeSeller(seller)
+        return safeSeller
+    }
 }
 
 export const sellerService = new SellerService();

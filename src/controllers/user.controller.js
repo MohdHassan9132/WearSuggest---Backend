@@ -81,16 +81,16 @@ const loginUser = asyncHandler(async (req, res) => {
     // if username exists, and password matches (by compare of bcrypt), login user and pass tokens via cookies
     // return the response for login success
 
-    const { username, email, password } = req.body;
-    if (!username && !email)
+    const { login, password } = req.body;
+    if (!login)
         throw new ApiError(
             400,
             "User is required to provide either username or email for login"
         );
     const user = await User.findOne({
-        $or: [{ username }, { email }],
+        $or: [{ username: login }, { email: login }],
     });
-
+    console.log(user)
     if (!user) throw new ApiError(404, "User not found!");
 
     if (!password || password.trim() === "")

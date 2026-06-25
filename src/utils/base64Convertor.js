@@ -6,7 +6,7 @@ export const convertToBase64 = function(filePath){
 }
 
 export const covertToImage = function(base64,outputPath){
-    const base64Data = base64String.replace(
+    const base64Data = base64.replace(
         /^data:image\/\w+;base64,/,
         ''
     );

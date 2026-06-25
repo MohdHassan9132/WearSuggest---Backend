@@ -7,7 +7,7 @@ import {
     findProcessingPosts,
     updatePostById,
 } from "../../../repositories/post.repository.js";
-import { findProductById } from "../../../repositories/product.repository.js";
+import { productRepository } from "../../../repositories/product.repository.js";
 import { findSellerById } from "../../../repositories/seller.repository.js";
 import { createCarouselContainer } from "./createCarouselContainer.js";
 import { createImageContainer } from "./createImageContainer.js";
@@ -98,7 +98,7 @@ const validateSellerInstagramAccess = (seller) => {
 const loadAndValidatePublishContext = async ({ seller, productId, caption }) => {
     validateSellerInstagramAccess(seller);
 
-    const product = await findProductById(productId);
+    const product = await productRepository.findProductById(productId);
 
     if (!product) {
         throw new ApiError(404, "Product not found");

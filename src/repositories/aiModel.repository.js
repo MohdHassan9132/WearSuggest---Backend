@@ -8,7 +8,7 @@ class AiModelRepository{
         return modelDoc
     }
     async updateStatus(modeldocId,status,error,ModelMedia){
-        const modelDoc = await AIModel.findByIdAndUpdate({_id: modeldocId},{
+        const modelDoc = await AIModel.findByIdAndUpdate(modeldocId,{
             status,
             error,
             ModelMedia
@@ -18,6 +18,10 @@ class AiModelRepository{
     async getModelByServiceId(serviceId,sellerId){
         const modelDoc = await AIModel.findOne({serviceId,sellerId})
         return modelDoc
+    }
+    async getModelById(id){
+        const model = await AIModel.findById(id)
+        return model
     }
 }
 

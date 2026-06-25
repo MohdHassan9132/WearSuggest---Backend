@@ -57,6 +57,17 @@ const userSchema = new mongoose.Schema(
     type: String,
     enum: ["cm"],
     default: "cm"
+  },
+
+  image:{
+    type:{
+      secureUrl:{
+        type: String
+      },
+      publicId:{
+        type: String
+      }
+    }
   }
 
 },

@@ -9,38 +9,29 @@ const virtualTryOnSchema = new mongoose.Schema(
       index: true,
     },
 
-    humanImage: {
-      type: String, // Cloudinary URL or Base64
-      required: true,
+     cloth1: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ClothingItem",
     },
 
-    clothImage: {
-      type: String, // Clothing image URL
-      required: true,
+    cloth2: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ClothingItem",
     },
 
-    taskId: {
-      type: String, // From Kling API
-    },
-
-    externalTaskId: {
-      type: String,
-      unique: true,
-    },
-
-    status: {
-      type: String,
-      enum: ["submitted", "processing", "succeed", "failed"],
-      default: "submitted",
+    cloth3: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ClothingItem",
     },
 
     resultImage: {
-      type: String, // final try-on image URL
+      type: {
+        url: String,
+        publicId: String
+      },
+      required: true
     },
 
-    errorMessage: {
-      type: String,
-    },
   },
   { timestamps: true }
 );

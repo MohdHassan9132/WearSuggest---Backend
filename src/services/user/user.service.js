@@ -1,12 +1,12 @@
-import { ApiError } from "../../utils/ApiError";
-import { blackAiService } from "../BlackAi/BlackAi.service";
-import { userRepository } from "../../repositories/user.repository";
-import { imageSourceResolver, modelImageResolver } from "../../utils/image.resolver";
-import { clothingItemRepository } from '../../repositories/clothingItem.repository'
-import { deleteFromCloudinary, uploadOnCloudinary } from "../../utils/cloudinary";
-import { validatePrompt } from '../../validators/prompt.validator'
-import { validateAspectRatio } from '../../validators/aspectRatio.validator'
-import { virtualTryOnRepository } from "../../repositories/virtualTryOn.repository";
+import { ApiError } from "../../utils/ApiError.js";
+import { blackAiService } from "../BlackAi/blackAi.service.js";
+import { userRepository } from "../../repositories/user.repository.js";
+import { imageSourceResolver, modelImageResolver } from "../../utils/image.resolver.js";
+import { clothingItemRepository } from '../../repositories/clothingItem.repository.js'
+import { deleteFromCloudinary, uploadOnCloudinary } from "../../utils/cloudinary.js";
+import { validatePrompt } from '../../validators/prompt.validator.js'
+import { validateAspectRatio } from '../../validators/aspectRatio.validator.js'
+import { virtualTryOnRepository } from "../../repositories/virtualTryOn.repository.js";
 import fs from 'fs'
 class UserService {
     async virtualTryOnOutfit(req) {
@@ -23,16 +23,19 @@ class UserService {
             cloth1 = await imageSourceResolver({
                     filePath: req.files?.cloth1?.[0]?.path,
                     docId: cloth1Id,
+                    ownerId: user._id,
                     fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
                 })
             cloth2 = await imageSourceResolver({
                     filePath: req.files?.cloth2?.[0]?.path,
                     docId: cloth2Id,
+                    ownerId: user._id,
                     fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
                 })
             cloth3 = await imageSourceResolver({
                     filePath: req.files?.cloth3?.[0]?.path,
                     docId: cloth3Id,
+                    ownerId: user._id,
                     required: false,
                     fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
                 })

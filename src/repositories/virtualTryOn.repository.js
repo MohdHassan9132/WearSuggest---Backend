@@ -1,4 +1,4 @@
-import { VirtualTryOn } from "../models/virtualTryOn.model";
+import { VirtualTryOn } from "../models/virtualTryOn.model.js";
 class VirtualTryOnRepository{
     async createVirtualTryOnDoc({
         owner,

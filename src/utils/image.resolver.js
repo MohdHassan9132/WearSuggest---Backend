@@ -1,9 +1,10 @@
-import { ApiError } from './ApiError'
+import { ApiError } from './ApiError.js'
 import mongoose from 'mongoose'
-import { uploadOnCloudinary } from './cloudinary'
+import { uploadOnCloudinary } from './cloudinary.js'
 export const imageSourceResolver = async function ({
     filePath,
     docId,
+    ownerId,
     required = true,
     fetchImage
 }) {
@@ -25,8 +26,7 @@ export const imageSourceResolver = async function ({
 
     }
     if (hasDoc) {
-        const doc = await fetchImage(docId)
-        return { url: doc.path, publicId: null }
+        return await fetchImage(docId,ownerId)
     }
 }
 export const modelImageResolver = async function modelImageResolver({

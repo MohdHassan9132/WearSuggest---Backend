@@ -1,4 +1,5 @@
 import {AIModel} from '../models/aiModel.model.js'
+import { ApiError } from '../utils/ApiError.js'
 
 
 class AiModelRepository{
@@ -22,6 +23,16 @@ class AiModelRepository{
     async getModelById(id){
         const model = await AIModel.findById(id)
         return model
+    }
+    async findModelImageUrl(id){
+        const model = await AIModel.findById(id)
+        if(!model){
+            throw new ApiError(404,"AiModel not found")
+        }
+        return {
+                url: model.modelMedia[0].url,
+                publicId: null
+            }
     }
 }
 

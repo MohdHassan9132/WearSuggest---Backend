@@ -1,5 +1,5 @@
-import { User } from "../models/user.model";
-import { ApiError } from "../utils/ApiError";
+import { User } from "../models/user.model.js";
+import { ApiError } from "../utils/ApiError.js";
 
 class UserRepository{
     async findUserById(id){

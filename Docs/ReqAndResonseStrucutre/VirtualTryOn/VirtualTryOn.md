@@ -1,134 +1,236 @@
-# Virtual Try On API
+# Virtual Try-On API
 
 ## Endpoint
 
-```
+```http
 POST /api/v1/virtual-try-on/outfit
 ```
 
 ---
 
-## Authentication
+# Authentication
 
-Required
+Authentication is required.
 
-```
-Bearer Token / Cookie
-```
+Supported authentication methods:
+
+* Bearer Token
+* Session Cookie
 
 ---
 
-## Request Type
+# Request Type
 
-```
+```text
 multipart/form-data
 ```
 
 ---
 
-## Request Fields
+# Supported Roles
 
-| Field      | Type     | Required  | Description                                                    |
-| ---------- | -------- | --------- | -------------------------------------------------------------- |
-| modelPhoto | File     | Optional* | Uploaded model image. Takes priority over saved profile image. |
-| cloth1     | File     | Optional* | First clothing image.                                          |
-| cloth2     | File     | Optional* | Second clothing image.                                         |
-| cloth3     | File     | Optional  | Third clothing image.                                          |
-| cloth1Id   | ObjectId | Optional* | Existing ClothingItem id.                                      |
-| cloth2Id   | ObjectId | Optional* | Existing ClothingItem id.                                      |
-| cloth3Id   | ObjectId | Optional  | Existing ClothingItem id.                                      |
-| prompt     | String   | Required  | AI generation prompt.                                          |
-| ratio      | String   | Required  | Output aspect ratio.                                           |
+The endpoint supports two authenticated roles:
+
+* **USER**
+* **SELLER**
+
+The controller automatically routes the request to the appropriate service based on the authenticated user's role.
 
 ---
 
-## Validation Rules
+# User Request
 
-### Model Image
+## Required Fields
 
-One of the following must exist:
+| Field                  | Required |
+| ---------------------- | :------: |
+| prompt                 |     ✓    |
+| ratio                  |     ✓    |
+| cloth1Id **or** cloth1 |     ✓    |
+| cloth2Id **or** cloth2 |     ✓    |
 
-* Uploaded `modelPhoto`
-* User profile image
+### Optional Fields
 
-Uploaded model image takes priority.
+| Field      |
+| ---------- |
+| cloth3Id   |
+| cloth3     |
+| modelPhoto |
+
+If `modelPhoto` is not provided, the authenticated user's profile image is used.
 
 ---
 
-### Clothing Images
+# Seller Request
 
-For each clothing input:
+## Required Fields
 
-Only one of the following is allowed.
+| Field                       | Required |
+| --------------------------- | :------: |
+| prompt                      |     ✓    |
+| ratio                       |     ✓    |
+| productId1 **or** cloth1    |     ✓    |
+| aiModelId **or** modelPhoto |     ✓    |
 
-```
+### Optional Fields
+
+| Field      |
+| ---------- |
+| productId2 |
+| productId3 |
+| cloth2     |
+| cloth3     |
+
+---
+
+# Validation Rules
+
+## Model Image Resolution
+
+### User
+
+A model image is resolved using the following priority:
+
+1. Uploaded `modelPhoto`
+2. User profile image
+
+If neither exists, the request is rejected.
+
+---
+
+### Seller
+
+A model image is resolved using the following priority:
+
+1. Uploaded `modelPhoto`
+2. Existing `aiModelId`
+
+If neither exists, the request is rejected.
+
+---
+
+## Clothing & Product Images
+
+Each image slot accepts **only one source**.
+
+Valid examples:
+
+```text
 cloth1
 OR
 cloth1Id
 ```
 
-Same applies for:
+```text
+cloth2
+OR
+cloth2Id
+```
 
-* cloth2
-* cloth3
+```text
+cloth3
+OR
+cloth3Id
+```
 
-Providing both results in a validation error.
+The Seller flow follows the same rule.
+
+```text
+cloth1
+OR
+productId1
+```
+
+Providing both a file and an existing document ID for the same slot results in a validation error.
 
 ---
 
-## Success Response
+# User Business Rules
+
+* Every `ClothingItem` must belong to the authenticated user.
+* Uploaded model images always take priority over the user's profile image.
+* Temporary Cloudinary uploads are deleted after processing.
+* A successful request creates a new `VirtualTryOn` document.
+
+---
+
+# Seller Business Rules
+
+* Every `Product` must belong to the authenticated seller.
+* Product images may be supplied either as uploads or existing Product IDs.
+* Uploaded model images always take priority over an existing AI Model.
+* The generated AI preview is stored only on the primary Product.
+* Temporary Cloudinary uploads are deleted after processing.
+
+---
+
+# Product Validation
+
+Whenever a Product is created or updated:
+
+* Only one fit section may contain values.
+* The selected product type must match the populated fit section.
+* Invalid fit combinations are rejected before the document is saved.
+
+---
+
+# Success Response
 
 ```json
 {
-    // TODO
+    "statusCode": 200,
+    "data": "...",
+    "message": "Virtual try on generated successfully"
 }
 ```
 
----
+The shape of `data` depends on the authenticated role.
 
-## Error Responses
-
-### 400 Bad Request
-
-```json
-{
-    // TODO
-}
-```
+| Role   | Response                                              |
+| ------ | ----------------------------------------------------- |
+| USER   | Newly created `VirtualTryOn` document                 |
+| SELLER | Updated `Product` containing the generated AI preview |
 
 ---
 
-### 401 Unauthorized
+# Error Responses
 
-```json
-{
-    // TODO
-}
-```
+## 400 Bad Request
 
----
+Examples:
 
-### 404 Not Found
-
-```json
-{
-    // TODO
-}
-```
+* Missing required images
+* Both uploaded file and document ID supplied for the same slot
+* Invalid prompt
+* Invalid aspect ratio
+* Invalid product fit data
 
 ---
 
-### 500 Internal Server Error
+## 401 Unauthorized
 
-```json
-{
-    // TODO
-}
-```
+Returned when the request is not authenticated.
 
 ---
 
-## Processing Flow
+## 404 Not Found
+
+Examples:
+
+* ClothingItem not found
+* Product not found
+* AI Model not found
+* Resource does not belong to the authenticated owner
+
+---
+
+## 500 Internal Server Error
+
+Returned when an unexpected server error occurs.
+
+---
+
+# Request Processing Flow
 
 ```text
 Client
@@ -137,23 +239,32 @@ Client
 Authentication
     │
     ▼
-Validation
+Validate Request
     │
     ▼
 Resolve Images
     │
     ▼
-BlackAI
+Repository Ownership Verification
     │
     ▼
-Upload Result
+Generate Outfit (BlackAI)
     │
     ▼
-Persist Data
+Persist Result
     │
     ▼
-Cleanup
+Delete Temporary Uploads
     │
     ▼
 Response
 ```
+
+---
+
+# Notes
+
+* Uploaded images are treated as temporary resources unless they become part of a permanent document.
+* Ownership validation is enforced inside repositories.
+* Image resolution is handled by dedicated resolvers, allowing services to remain independent of image sources.
+* Temporary Cloudinary uploads are deleted in a `finally` block, ensuring cleanup even when generation fails.

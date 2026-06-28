@@ -1,102 +1,137 @@
-# Virtual Try On Architecture
+# Virtual Try-On Architecture
 
 ## Goal
 
-The goal of this feature is to let both Users and Sellers generate AI virtual try-ons while keeping the code easy to understand and easy to change later.
+The Virtual Try-On feature allows both **Users** and **Sellers** to generate AI-powered virtual try-ons while keeping the architecture:
 
-The controller only decides who is making the request.
+- Easy to understand
+- Easy to extend
+- Easy to maintain
+
+The controller is responsible only for determining who is making the request. All business logic lives inside the appropriate service.
+
+---
+
+# Overall Flow
 
 ```text
 Controller
-        │
-        ├── User Service
-        └── Seller Service
+    │
+    ├── UserVirtualTryOnService
+    │
+    └── SellerVirtualTryOnService
 ```
-
-After that, each service handles its own business logic.
 
 ---
 
-## How the User Service works
-
-The service follows the same order every time.
+# User Virtual Try-On Flow
 
 ```text
-Validate Request
-        │
-        ▼
-Get Model Image
-        │
-        ▼
-Get Clothing Images
-        │
-        ▼
-Send Images to BlackAI
-        │
-        ▼
-Save Generated Image
-        │
-        ▼
-Create VirtualTryOn Document
-        │
-        ▼
-Delete Temporary Images
+Controller
+      │
+      ▼
+UserVirtualTryOnService
+      │
+      ├── Validate Prompt & Aspect Ratio
+      ├── Resolve Model Image
+      ├── Resolve Clothing Images
+      ├── Repository Ownership Checks
+      ├── Generate Outfit (BlackAI)
+      ├── Create VirtualTryOn Document
+      ├── Delete Temporary Uploads
+      └── Return Response
 ```
 
-The service doesn't decide where images come from.
-
-It simply asks another function to provide them.
+The User service coordinates the entire generation flow while delegating image resolution, database operations, and AI communication to dedicated components.
 
 ---
 
-## Image Source Resolver
+# Seller Virtual Try-On Flow
 
-The image source resolver has only one job.
+```text
+Controller
+      │
+      ▼
+SellerVirtualTryOnService
+      │
+      ├── Validate Prompt & Aspect Ratio
+      ├── Resolve AI Model
+      ├── Resolve Product Images
+      ├── Repository Ownership Checks
+      ├── Generate Outfit (BlackAI)
+      ├── Store AI Preview
+      ├── Delete Temporary Uploads
+      └── Return Response
+```
 
-Figure out where the clothing image should come from.
+Unlike the User flow, the Seller flow stores the generated preview inside the primary Product instead of creating a separate `VirtualTryOn` document.
 
-Possible sources:
+Only the **first product** receives the generated preview.
 
-* Uploaded file.
-* ClothingItem stored in the database.
-* Product (Seller flow).
+This avoids storing duplicate AI previews across multiple products.
 
-No matter where the image comes from, it always returns:
+---
 
-```js
+# Image Source Resolver
+
+The `imageSourceResolver()` has a single responsibility:
+
+> Return an image regardless of where it originates.
+
+Possible image sources include:
+
+- Uploaded file
+- ClothingItem (User flow)
+- Product (Seller flow)
+
+The resolver never performs database queries itself.
+
+Instead, the service supplies a repository callback.
+
+```ts
+imageSourceResolver({
+    filePath,
+    docId,
+    ownerId,
+    fetchImage
+});
+```
+
+Every image source returns the same structure.
+
+```ts
 {
     url,
     publicId
 }
 ```
 
-Because every source returns the same format, the service can use the image without caring where it came from.
+Because every source shares the same return type, the services do not need separate logic for uploaded files and stored images.
 
 ---
 
-## Model Image Resolver
+# Model Image Resolver
 
-The model image has different rules from clothing images.
+Model images follow different rules than clothing images.
 
-Priority:
+Resolution priority:
 
-1. Use the uploaded model image if one was provided.
-2. Otherwise use the user's profile image.
-3. If neither exists, stop the request.
+1. Uploaded model image
+2. Existing User profile image
+3. Existing Seller AI model image
 
-Keeping this logic in its own resolver keeps the service much smaller.
+If no valid model image can be resolved, the request is rejected.
+
+Keeping this logic separate prevents the generic image resolver from becoming filled with role-specific conditions.
 
 ---
 
-## Repository
+# Repository Responsibilities
 
-The repository is the only place that talks to MongoDB.
+Repositories have two responsibilities:
 
-The resolver never queries the database directly.
-
-Instead, it receives a repository function.
-
-Example:
+1. Read and write MongoDB documents.
+2. Enforce resource ownership.
 
 ```text
 Service
@@ -107,55 +142,133 @@ Image Resolver
     ▼
 Repository
     │
+Ownership Check
+    │
     ▼
 MongoDB
 ```
 
-Because of this, the resolver doesn't know whether the image comes from a ClothingItem, Product, or something else.
+Example:
+
+```ts
+Product.findOne({
+    _id: productId,
+    seller: ownerId
+});
+```
+
+Clothing items follow the same ownership pattern.
+
+Ownership validation is hidden inside repositories, allowing services and resolvers to remain database-agnostic.
 
 ---
 
-## Temporary Images
+# Product Validation
 
-Images uploaded only for the current request are temporary.
+The Product schema owns all business rules related to fit information.
 
-These images receive a Cloudinary `publicId`.
+Before saving, it validates that:
 
-After the request finishes, they are deleted inside the `finally` block.
+- Only one fit section contains data.
+- The selected product type matches the populated fit section.
+- Empty fit sections are removed automatically.
 
-Images that already belong to ClothingItems or Products are never deleted because they are permanent data.
+This guarantees invalid product configurations never reach the database.
 
 ---
 
-## Responsibility of each layer
+# Temporary Images
 
-### Controller
+Images uploaded specifically for a single request are considered temporary.
 
-* Receive the request.
-* Decide whether it should go to the User Service or Seller Service.
-* Return the response.
+Each temporary upload receives a Cloudinary `publicId`.
 
-### Service
+After the Virtual Try-On process finishes, the service removes every temporary upload inside a `finally` block.
 
-* Run the complete Virtual Try-On flow step by step.
-* Call validators, resolvers, repositories and AI services.
+```text
+Temporary Upload
+        │
+        ▼
+Cloudinary
+        │
+        ▼
+Virtual Try-On Finished
+        │
+        ▼
+Delete Temporary Images
+```
 
-### Resolver
+Permanent images that belong to:
 
-* Decide where an image should come from.
-* Return the image in a consistent format.
+- ClothingItem
+- Product
+- AI Model
 
-### Repository
+are never deleted.
 
-* Read or write data in MongoDB.
-* Hide database details from the service.
+---
 
-### BlackAI Service
+# Layer Responsibilities
 
-* Send images to the BlackAI API.
-* Return the generated result.
+## Controller
 
-### Cloudinary Utility
+- Receive the request
+- Determine the authenticated role
+- Call the correct service
+- Return the response
 
-* Upload temporary images.
-* Delete temporary images after they are no longer needed.
+---
+
+## Service
+
+- Execute the Virtual Try-On workflow
+- Validate request data
+- Coordinate resolvers
+- Coordinate repositories
+- Coordinate AI services
+- Clean temporary uploads
+
+---
+
+## Resolver
+
+- Decide where an image comes from
+- Return a consistent image object
+- Remain independent of database logic
+
+---
+
+## Repository
+
+- Read MongoDB documents
+- Update MongoDB documents
+- Enforce ownership rules
+- Hide persistence details
+
+---
+
+## BlackAI Service
+
+- Receive prepared images
+- Generate the virtual try-on
+- Return the generated outfit
+
+---
+
+## Cloudinary Utility
+
+- Upload temporary images
+- Delete temporary uploads after processing
+
+---
+
+# Design Principles
+
+The architecture follows several design principles:
+
+- **Single Responsibility Principle** — each component has one job.
+- **Dependency Injection** — repositories are supplied to resolvers.
+- **Separation of Concerns** — controllers, services, resolvers, repositories, and external services each have clearly defined responsibilities.
+- **Consistent Data Contracts** — all image sources return the same object structure.
+- **Ownership Enforcement** — repositories ensure users can only access resources they own.
+- **Automatic Cleanup** — temporary uploads are always deleted, even if generation fails.

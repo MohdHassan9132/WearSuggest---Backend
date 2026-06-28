@@ -4,7 +4,6 @@ import { JWTVerify, verifyUser } from "../middleware/auth.middleware.js";
 import { rateLimiter } from "../middleware/rateLimit.middleware.js";
 import {
     outfit,
-    upload_outfit
 } from "../controllers/virtualTryOn.controller.js";
 
 const router = Router();
@@ -16,6 +15,6 @@ router.post(
     {name: "cloth3",maxCount: 1},
     {name: "modelPhoto",maxCount:1}
     ]),
-    upload_outfit
+    outfit
 )
 export default router;

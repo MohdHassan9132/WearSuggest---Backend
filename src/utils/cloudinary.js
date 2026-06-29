@@ -28,6 +28,21 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 };
 
+const uploadFromUrl = async (fileUrl) => {
+  try {
+    if (!fileUrl) return null;
+
+    const response = await cloudinary.uploader.upload(fileUrl, {
+      resource_type: "auto",
+    });
+
+    console.log("Cloudinary response:", response);
+    return response;
+  } catch (error) {
+    console.log(error.message);
+  }
+};
+
 const deleteFromCloudinary = async (publicID, resourceType) => {
     if (!publicID?.trim()) throw new ApiError(400, "Invalid public_id");
 
@@ -57,4 +72,4 @@ const cloudinaryPing = async() => {
 
     return cloudinaryPingResponse;
 }
-export { uploadOnCloudinary, deleteFromCloudinary, cloudinaryPing };
+export { uploadOnCloudinary, deleteFromCloudinary, cloudinaryPing,uploadFromUrl };

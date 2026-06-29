@@ -30,5 +30,6 @@ export const env = {
         SECRET: process.env.RAZORPAY_SECRET,
         WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET
     },
-    FASHN_API_KEY:process.env.FASHN_API_KEY
+    FASHN_API_KEY:process.env.FASHN_API_KEY,
+    BLACK_AI_KEY:process.env.BLACK_AI_KEY
 };

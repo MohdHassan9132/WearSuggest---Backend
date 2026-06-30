@@ -137,9 +137,10 @@ A successful request:
 
 1. Generates an outfit using `BlackAI`
 2. Receives the generated image URL
-3. Uploads the generated image to Cloudinary
-4. Stores the Cloudinary `url` and `publicId` inside the `VirtualTryOn` document
-5. Deletes all temporary uploads
+3. Uploads the generated image to Cloudinary through `uploadFromUrl()`
+4. Converts the Cloudinary upload response into the application's image object
+5. Stores that image object inside the `VirtualTryOn` document
+6. Deletes all temporary uploads
 
 ## Seller Business Rules
 
@@ -149,6 +150,8 @@ A successful request:
 - The generated AI preview is stored only on the primary `Product`.
 - Temporary Cloudinary uploads are deleted after processing.
 
+A successful Seller request stores the generated image object inside `Product.media.aiModelPreview`.
+
 ## Product Validation
 
 Whenever a `Product` is created or updated:
@@ -156,6 +159,36 @@ Whenever a `Product` is created or updated:
 - Only one fit section may contain values.
 - The selected product type must match the populated fit section.
 - Invalid fit combinations are rejected before the document is saved.
+
+## Generated Image Storage
+
+After `BlackAI` returns the generated outfit URL, it is immediately uploaded to Cloudinary.
+
+The Cloudinary helper then converts the provider response into the application's image object:
+
+```ts
+{
+  url,
+  publicId
+}
+```
+
+This object is what gets persisted.
+
+### Persistence Target by Role
+
+| Role | Persistence target |
+| --- | --- |
+| `USER` | `VirtualTryOn.virtualTryOnImage` |
+| `SELLER` | `Product.media.aiModelPreview` |
+
+```mermaid
+flowchart TD
+    BlackAI["BlackAI generated image URL"] --> Upload["uploadFromUrl()"]
+    Upload --> ImageObject["{ url, publicId }"]
+    ImageObject --> UserDoc["VirtualTryOn document"]
+    ImageObject --> SellerDoc["Product.media.aiModelPreview"]
+```
 
 ## Success Response
 
@@ -168,7 +201,7 @@ Whenever a `Product` is created or updated:
     "cloth1": "...",
     "cloth2": "...",
     "cloth3": "...",
-    "resultImage": {
+    "virtualTryOnImage": {
       "url": "...",
       "publicId": "..."
     },
@@ -185,6 +218,9 @@ The shape of `data` depends on the authenticated role.
 | --- | --- |
 | `USER` | Newly created `VirtualTryOn` document |
 | `SELLER` | Updated `Product` containing the generated AI preview |
+
+> [!NOTE]
+> In the current implementation, the User flow stores the generated image under `virtualTryOnImage`, while the Seller flow stores it inside `Product.media.aiModelPreview`.
 
 ## Error Responses
 
@@ -242,13 +278,31 @@ Receive Generated Image URL
 Upload Generated Image to Cloudinary
     |
     v
-Create VirtualTryOn Document
+Convert Upload Response to Application Image Object
+    |
+    v
+Persist Image Object
     |
     v
 Delete Temporary Uploads
     |
     v
 Response
+```
+
+```mermaid
+flowchart TD
+    Client --> Auth["Authentication"]
+    Auth --> Validate["Validate Request"]
+    Validate --> Resolve["Resolve Images"]
+    Resolve --> Ownership["Repository Ownership Verification"]
+    Ownership --> Generate["Generate Outfit (BlackAI)"]
+    Generate --> GeneratedUrl["Receive Generated Image URL"]
+    GeneratedUrl --> Cloudinary["uploadFromUrl()"]
+    Cloudinary --> ImageObject["{ url, publicId }"]
+    ImageObject --> Persist["Persist Image Object"]
+    Persist --> Cleanup["Delete Temporary Uploads"]
+    Cleanup --> Response["Response"]
 ```
 
 ## Notes
@@ -261,6 +315,9 @@ Response
 
 > [!NOTE]
 > Image resolution is handled by dedicated resolvers, allowing services to remain independent of image sources.
+
+> [!NOTE]
+> `uploadFromUrl()` hides Cloudinary's raw response and returns the application's image object instead.
 
 > [!NOTE]
 > Temporary Cloudinary uploads are deleted in a `finally` block, ensuring cleanup even when generation fails.

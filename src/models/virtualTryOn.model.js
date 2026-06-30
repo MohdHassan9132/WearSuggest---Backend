@@ -24,7 +24,7 @@ const virtualTryOnSchema = new mongoose.Schema(
       ref: "ClothingItem",
     },
 
-    resultImage: {
+    virtualTryOnImage: {
       type: {
         url: String,
         publicId: String

@@ -5,14 +5,14 @@ class VirtualTryOnRepository{
         cloth1,
         cloth2,
         cloth3,
-        resultImage,
+        virtualTryOnImage,
     }){
         return await VirtualTryOn.create({
             cloth1,
             cloth2,
             cloth3,
             owner,
-            resultImage
+            virtualTryOnImage,
         })
     }
 }

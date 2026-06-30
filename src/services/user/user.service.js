@@ -48,18 +48,13 @@ class UserService {
                 prompt: validatedPrompt,
                 ratio: validatedRatio
             })
-            const uploadResult = await uploadFromUrl(generatedImageUrl)
-            const resultImage = {
-                url: uploadResult.secure_url,
-                publicId: uploadResult.public_id
-            }
-  
+            const virtualTryOnImage = await uploadFromUrl(generatedImageUrl)
             const vtryOn = await virtualTryOnRepository.createVirtualTryOnDoc({
                 owner: req.user._id,
                 cloth1: cloth1Id,
                 cloth2: cloth2Id,
                 cloth3: cloth3Id,
-                resultImage
+                virtualTryOnImage
             })
             return vtryOn;
         } catch (error) {

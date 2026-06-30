@@ -37,7 +37,10 @@ const uploadFromUrl = async (fileUrl) => {
     });
 
     console.log("Cloudinary response:", response);
-    return response;
+    return {
+        url: response.secure_url,
+        publicId: response.public_id
+    }
   } catch (error) {
     console.log(error.message);
   }

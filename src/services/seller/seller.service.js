@@ -5,7 +5,7 @@ import { blackAiService } from "../BlackAi/blackAi.service.js";
 import {imageSourceResolver} from '../../utils/image.resolver.js'
 import { productRepository } from "../../repositories/product.repository.js";
 import { aiModelRepository } from "../../repositories/aiModel.repository.js";
-import { deleteFromCloudinary } from "../../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadFromUrl } from "../../utils/cloudinary.js";
 
 class SellerService{
     async virtulTryOnOutfit(req){
@@ -41,16 +41,17 @@ class SellerService{
                 required: false,
                 fetchImage: productRepository.findProductImageUrl.bind(productRepository)
             })
-            const outfit = await blackAiService.virtualTryOnOutfit({
+            const generatedImageUrl = await blackAiService.virtualTryOnOutfit({
                 clothingImage1: product1.url,
                 clothingImage2: product2?.url,
                 clothingImage3: product3?.url,
-                modelPhoto,
+                modelPhoto: modelPhoto.url,
                 prompt: validatedPrompt,
                 ratio: validatedRatio
             })
+           const virtualTryOnImage = await uploadFromUrl(generatedImageUrl)
             //upload outfit on your own storage
-            const product = await productRepository.findProductByIdAndAddVtryOnImage(productId1,seller._id,outfit)
+            const product = await productRepository.addVirtualTryOnImage(productId1,seller._id,virtualTryOnImage)
             return product
         } catch (error) {
             throw error

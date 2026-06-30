@@ -18,7 +18,7 @@ class ProductRepository{
             publicId: null
         }
     }
-    async findProductByIdAndAddVtryOnImage(id,sellerId,url,publicId){
+    async addVirtualTryOnImage(id,sellerId,virtualTryOnImage){
         const product = await Product.findOneAndUpdate(
             {
                 _id: id,
@@ -26,10 +26,7 @@ class ProductRepository{
             },
             {
                 $push:{
-                   "media.aiModelPreview":{
-                    url,
-                    publicId
-                   }
+                   "media.aiModelPreview": virtualTryOnImage
                 }
             },
             {returnDocument: "after"}

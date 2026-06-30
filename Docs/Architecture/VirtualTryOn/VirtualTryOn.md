@@ -166,7 +166,7 @@ The Cloudinary utility provides several helper functions:
 #### Temporary Uploads
 
 - Upload images that will be deleted after processing
-- Returns Cloudinary `url` and `publicId`
+- `uploadOnCloudinary()` currently returns Cloudinary's raw response
 
 #### Permanent Uploads
 
@@ -193,6 +193,35 @@ uploadFromUrl(imageUrl, options)
 
 This is used after receiving the generated image URL from BlackAI.
 
+### Cloudinary Response Abstraction
+
+One important improvement is that `uploadFromUrl()` now converts Cloudinary's raw response into the application's image object.
+
+```ts
+{
+  url,
+  publicId
+}
+```
+
+That means:
+
+- Services no longer understand Cloudinary response fields such as `secure_url` and `public_id`
+- Repositories receive only application objects
+- Cloudinary-specific details stay inside the Cloudinary utility
+
+```mermaid
+flowchart TD
+    Cloudinary --> uploadFromUrl
+    uploadFromUrl --> ImageObject["{ url, publicId }"]
+    ImageObject --> Service
+    Service --> Repository
+```
+
+The Seller flow now follows the same image handling pattern as the User flow.
+
+Both services receive the same application image object and pass that object to their repositories instead of manually extracting provider-specific fields.
+
 ## Generated Image Persistence
 
 After BlackAI returns the generated image URL:
@@ -212,10 +241,18 @@ Cloudinary Upload (uploadFromUrl)
 }
       |
       v
-VirtualTryOn Repository
+Repository
       |
       v
 MongoDB
+```
+
+```mermaid
+flowchart TD
+    BlackAI["BlackAI generated image URL"] --> Upload["uploadFromUrl()"]
+    Upload --> ImageObject["{ url, publicId }"]
+    ImageObject --> UserRepository["VirtualTryOnRepository"]
+    ImageObject --> SellerRepository["ProductRepository"]
 ```
 
 The generated image is stored in Cloudinary instead of keeping the provider URL because:
@@ -224,7 +261,11 @@ The generated image is stored in Cloudinary instead of keeping the provider URL 
 - External provider URLs may expire
 - We maintain full control over the asset
 
-Only the Cloudinary image is stored inside MongoDB.
+Only the Cloudinary image object is stored inside MongoDB.
+
+In the User flow, the object is stored inside the `VirtualTryOn` document.
+
+In the Seller flow, the object is stored inside `Product.media.aiModelPreview`.
 
 ## Repository Responsibilities
 
@@ -264,6 +305,31 @@ Ownership validation is hidden inside repositories, allowing services and resolv
 Repositories never interact with Cloudinary or BlackAI.
 
 They only save and retrieve MongoDB documents.
+
+The repository contract now stays infrastructure-agnostic.
+
+For example, the Seller repository receives:
+
+```ts
+addVirtualTryOnImage(
+  productId,
+  sellerId,
+  virtualTryOnImage
+)
+```
+
+instead of receiving Cloudinary-specific fields such as:
+
+```ts
+addVirtualTryOnImage(
+  productId,
+  sellerId,
+  secure_url,
+  public_id
+)
+```
+
+This keeps repositories focused only on persisting application data.
 
 ## Product Validation
 
@@ -326,6 +392,7 @@ are never deleted.
 - Coordinate resolvers
 - Coordinate repositories
 - Coordinate external services (`BlackAI`, `Cloudinary`)
+- Work only with application image objects after helper abstraction
 - Clean temporary uploads
 
 ### Resolver
@@ -340,6 +407,7 @@ are never deleted.
 - Update MongoDB documents
 - Enforce ownership rules
 - Hide persistence details
+- Stay independent from storage-provider response formats
 
 ### BlackAI Service
 
@@ -352,6 +420,7 @@ are never deleted.
 - Upload temporary images
 - Upload permanent images
 - Upload from URL
+- Convert generated-image uploads into the application's image object
 - Delete temporary uploads after processing
 
 ## Design Principles
@@ -361,7 +430,8 @@ The architecture follows several design principles:
 - **Single Responsibility Principle**: each component has one job.
 - **Dependency Injection**: repositories are supplied to resolvers.
 - **Separation of Concerns**: controllers, services, resolvers, repositories, and external services each have clearly defined responsibilities.
-- **Consistent Data Contracts**: all image sources return the same object structure.
+- **Consistent Data Contracts**: image-related flows aim to return the same object structure.
 - **Ownership Enforcement**: repositories ensure users can only access resources they own.
 - **Automatic Cleanup**: temporary uploads are always deleted, even if generation fails.
+- **Infrastructure Hiding**: helpers absorb provider-specific response formats so higher layers stay application-focused.
 - **Independence**: repositories remain independent from external services.

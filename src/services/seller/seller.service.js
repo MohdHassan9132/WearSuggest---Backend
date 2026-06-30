@@ -10,6 +10,7 @@ import { ApiError } from "../../utils/ApiError.js";
 
 class SellerService{
     async virtulTryOnOutfit(req){
+        console.log("Request reached seller service")
         const {productId1,productId2,productId3,aiModelId,prompt,ratio} = req.body
         if(!productId1){
             throw new ApiError(400,"At least one existing product is required")
@@ -45,6 +46,8 @@ class SellerService{
                 required: false,
                 fetchImage: productRepository.findProductImageUrl.bind(productRepository)
             })
+            console.log("resolved all images model and clothe",product1,product2,product3,modelPhoto)
+            console.log("sending to ai service")
             const generatedImageUrl = await blackAiService.virtualTryOnOutfit({
                 clothingImage1: product1.url,
                 clothingImage2: product2?.url,
@@ -53,6 +56,7 @@ class SellerService{
                 prompt: validatedPrompt,
                 ratio: validatedRatio
             })
+            console.log("returned from ai service",generatedImageUrl)
            const virtualTryOnImage = await uploadFromUrl(generatedImageUrl)
             //upload outfit on your own storage
             const product = await productRepository.addVirtualTryOnImage(productId1,seller._id,virtualTryOnImage)

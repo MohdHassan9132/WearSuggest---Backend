@@ -59,7 +59,7 @@ If `modelPhoto` is not provided, the authenticated user's profile image is used.
 | --- | :---: |
 | `prompt` | Yes |
 | `ratio` | Yes |
-| `productId1` **or** `cloth1` | Yes |
+| `productId1` | Yes |
 | `aiModelId` **or** `modelPhoto` | Yes |
 
 ### Optional Fields
@@ -68,6 +68,7 @@ If `modelPhoto` is not provided, the authenticated user's profile image is used.
 | --- |
 | `productId2` |
 | `productId3` |
+| `cloth1` |
 | `cloth2` |
 | `cloth3` |
 
@@ -93,6 +94,14 @@ A model image is resolved using the following priority:
 
 If neither exists, the request is rejected.
 
+#### Seller Primary Product
+
+`productId1` is required.
+
+Uploaded clothing images do not replace the requirement for a primary existing product.
+
+This guarantees the generated preview can always be permanently associated with a product.
+
 ### Clothing & Product Images
 
 Each image slot accepts only one source.
@@ -117,12 +126,18 @@ OR
 cloth3Id
 ```
 
-The Seller flow follows the same rule.
+The Seller flow follows the same "one source per clothing slot" rule.
 
+
+For example:
 ```text
-cloth1
+cloth2
 OR
-productId1
+productId2
+
+cloth3
+OR
+productId3
 ```
 
 Providing both a file and an existing document ID for the same slot results in a validation error.
@@ -145,6 +160,8 @@ A successful request:
 ## Seller Business Rules
 
 - Every `Product` must belong to the authenticated seller.
+- `productId1` is required for every Seller request.
+- At least one existing product participates in every Seller virtual try-on generation.
 - Product images may be supplied either as uploads or existing Product IDs.
 - Uploaded model images always take priority over an existing AI Model.
 - The generated AI preview is stored only on the primary `Product`.
@@ -164,7 +181,9 @@ Whenever a `Product` is created or updated:
 
 After `BlackAI` returns the generated outfit URL, it is immediately uploaded to Cloudinary.
 
-The Cloudinary helper then converts the provider response into the application's image object:
+`uploadFromUrl()` uploads the generated image to Cloudinary.
+
+`uploadFromUrl()` also converts Cloudinary's response into the application's image object:
 
 ```ts
 {
@@ -181,6 +200,8 @@ This object is what gets persisted.
 | --- | --- |
 | `USER` | `VirtualTryOn.virtualTryOnImage` |
 | `SELLER` | `Product.media.aiModelPreview` |
+
+In the current implementation, the User flow stores the generated image under `virtualTryOnImage`, while the Seller flow stores it inside `Product.media.aiModelPreview`.
 
 ```mermaid
 flowchart TD
@@ -218,9 +239,6 @@ The shape of `data` depends on the authenticated role.
 | --- | --- |
 | `USER` | Newly created `VirtualTryOn` document |
 | `SELLER` | Updated `Product` containing the generated AI preview |
-
-> [!NOTE]
-> In the current implementation, the User flow stores the generated image under `virtualTryOnImage`, while the Seller flow stores it inside `Product.media.aiModelPreview`.
 
 ## Error Responses
 
@@ -275,10 +293,7 @@ Generate Outfit (BlackAI)
 Receive Generated Image URL
     |
     v
-Upload Generated Image to Cloudinary
-    |
-    v
-Convert Upload Response to Application Image Object
+uploadFromUrl()
     |
     v
 Persist Image Object
@@ -298,9 +313,8 @@ flowchart TD
     Resolve --> Ownership["Repository Ownership Verification"]
     Ownership --> Generate["Generate Outfit (BlackAI)"]
     Generate --> GeneratedUrl["Receive Generated Image URL"]
-    GeneratedUrl --> Cloudinary["uploadFromUrl()"]
-    Cloudinary --> ImageObject["{ url, publicId }"]
-    ImageObject --> Persist["Persist Image Object"]
+    GeneratedUrl --> Upload["uploadFromUrl()"]
+    Upload --> Persist["Persist Image Object"]
     Persist --> Cleanup["Delete Temporary Uploads"]
     Cleanup --> Response["Response"]
 ```

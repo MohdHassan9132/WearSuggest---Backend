@@ -67,6 +67,18 @@ Unlike the User flow, the Seller flow stores the generated preview inside the pr
 >
 > This avoids storing duplicate AI previews across multiple products.
 
+### Primary Product Requirement
+
+Every Seller request must include `productId1`.
+
+`productId1` acts as the primary product for the request.
+
+Uploaded clothing images may still be used for any clothing slot, but they do not replace the need for a primary existing product.
+
+The generated preview is always attached to the primary product.
+
+This guarantees every generated preview has a permanent owner in the database.
+
 ## Image Resolution
 
 ### Image Source Resolver
@@ -434,4 +446,5 @@ The architecture follows several design principles:
 - **Ownership Enforcement**: repositories ensure users can only access resources they own.
 - **Automatic Cleanup**: temporary uploads are always deleted, even if generation fails.
 - **Infrastructure Hiding**: helpers absorb provider-specific response formats so higher layers stay application-focused.
+- **Permanent Ownership**: Every generated seller preview is attached to an existing `Product`, ensuring generated assets always have a permanent owner.
 - **Independence**: repositories remain independent from external services.

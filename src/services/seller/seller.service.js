@@ -6,10 +6,14 @@ import {imageSourceResolver} from '../../utils/image.resolver.js'
 import { productRepository } from "../../repositories/product.repository.js";
 import { aiModelRepository } from "../../repositories/aiModel.repository.js";
 import { deleteFromCloudinary, uploadFromUrl } from "../../utils/cloudinary.js";
+import { ApiError } from "../../utils/ApiError.js";
 
 class SellerService{
     async virtulTryOnOutfit(req){
         const {productId1,productId2,productId3,aiModelId,prompt,ratio} = req.body
+        if(!productId1){
+            throw new ApiError(400,"At least one existing product is required")
+        }
         const validatedPrompt = validatePrompt(prompt)
         const validatedRatio = validateAspectRatio(ratio)
         let modelPhoto,product1,product2,product3;

@@ -361,6 +361,8 @@ Images uploaded specifically for a single request are considered temporary.
 
 Each temporary upload receives a Cloudinary `publicId`.
 
+Note: Temporary resources are always cleaned up inside a finally block. Whether the request fails due to validation, a repository error, a missing service configuration, or a third-party service failure, Multer's temporary files and any temporary Cloudinary uploads are removed before the request exits. 
+
 After the Virtual Try-On process finishes, the service removes every temporary upload inside a `finally` block.
 
 ```text

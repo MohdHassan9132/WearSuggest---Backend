@@ -7,6 +7,8 @@ import { productRepository } from "../../repositories/product.repository.js";
 import { aiModelRepository } from "../../repositories/aiModel.repository.js";
 import { deleteFromCloudinary, uploadFromUrl } from "../../utils/cloudinary.js";
 import { ApiError } from "../../utils/ApiError.js";
+import fs from 'fs'
+import { env } from "../../config/env.js";
 
 class SellerService{
     async virtulTryOnOutfit(req){
@@ -19,6 +21,9 @@ class SellerService{
         const validatedRatio = validateAspectRatio(ratio)
         let modelPhoto,product1,product2,product3;
         try {
+            if(!env.BLACK_AI_KEY){
+            throw new ApiError(503,"This service is currently unavailable")
+        }
             const seller = await sellerRepository.findSellerByField("_id",req.user._id)
             modelPhoto = await imageSourceResolver({
                 filePath: req.files?.modelPhoto?.[0].path,
@@ -73,6 +78,17 @@ class SellerService{
             for(const image of temporaryImages){
                 if(image?.publicId){
                     await deleteFromCloudinary(image.publicId)
+                }
+            }
+            const temporaryFile = [
+                req.files?.modelPhoto?.[0].path,
+                req.files?.cloth1?.[0].path,
+                req.files?.cloth2?.[0].path,
+                req.files?.cloth3?.[0].path
+            ]
+            for(const file of temporaryFile){
+                if(file && fs.existsSync(file)){
+                    fs.unlinkSync(file)
                 }
             }
         }

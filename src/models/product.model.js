@@ -1,119 +1,131 @@
 import mongoose from 'mongoose'
 
 const productSchema = new mongoose.Schema(
-{
-  seller: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Seller",
-    required: true,
-    index: true
-  },
+  {
+    seller: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Seller",
+      required: true,
+      index: true
+    },
 
-  type: {
-    type: String,
-    enum: ["footwear", "upper", "lower", "outerwear"],
-    required: true,
-    index: true
-  },
-
-  category: {
-    type: String, // jeans, hoodie, etc
-    required: true
-  },
-
-  fitData: {
-    fitType: {
+    type: {
       type: String,
-      enum: ["slim", "regular", "loose", "oversized"],
-      default: "regular"
+      enum: ["footwear", "upper", "lower", "outerwear"],
+      required: true,
+      index: true
     },
 
-    upper: {
-      chest: Number,
-      waist: Number,
-      shoulder: Number,
-      sleeveLength: Number,
-      length: Number,
+    category: {
+      type: String, // jeans, hoodie, etc
+      required: true
     },
 
-    lower: {
-      waist: Number,
-      thigh: Number,
-      length: Number,
-    },
-
-    footwear: {
-      region: {
+    fitData: {
+      fitType: {
         type: String,
-        enum:["Indian","UK","US"]
+        enum: ["slim", "regular", "loose", "oversized"],
+        default: "regular"
       },
-      size: Number
+
+      upper: {
+        chest: Number,
+        waist: Number,
+        shoulder: Number,
+        sleeveLength: Number,
+        length: Number,
+      },
+
+      lower: {
+        waist: Number,
+        thigh: Number,
+        length: Number,
+      },
+
+      footwear: {
+        region: {
+          type: String,
+          enum: ["Indian", "UK", "US"]
+        },
+        size: Number
+      }
+    },
+
+    color: {
+      type: String,
+      required: true,
+      lowercase: true,
+    },
+
+    colorGroup: {
+      type: String,
+      enum: ["neutral", "warm", "cool"],
+      required: true,
+      index: true,
+    },
+
+    season: [{
+      type: String,
+      lowercase: true,
+      enum: ["summer", "winter", "rainy"]
+    }],
+
+    occasion: {
+      type: String,
+      lowercase: true,
+      enum: ["casual", "formal", "party"],
+      required: true,
+      index: true,
+    },
+
+
+    media: {
+      productImages: {
+        type: [
+          {
+            url: {
+              type: String,
+              required: true
+            },
+            publicId: {
+              type: String,
+              required: true
+            }
+          }
+        ],
+        required: true
+      },
+
+      aiModelPreview: {
+        type: [
+          {
+            url: String,
+            publicId: String
+          }
+        ],
+        default: []
+      }
+    },
+
+
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+
+    isPublished: {
+      type: Boolean,
+      default: false
     }
+
   },
-
-  color: {
-type: String,
-required: true,
-lowercase: true,
-},
-
-colorGroup: {
-type: String,
-enum: ["neutral", "warm", "cool"],
-required: true,
-index: true,
-},
-
-season: [{
-type: String,
-lowercase: true,
-enum: ["summer", "winter", "rainy"]
-}],
-
-occasion: {
-type: String,
-lowercase: true,
-enum: ["casual", "formal", "party"],
-required: true,
-index: true,
-},
-
-
-  media: {
-productImages: [
-{
-url: String,
-publicId: String
-}
-],
-
-aiModelPreview:[
-  { 
-url: String,
-publicId: String
-  }
-]
-},
-
-
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-
-  isPublished: {
-    type: Boolean,
-    default: false
-  }
-
-},
-{ timestamps: true, strict: true }
+  { timestamps: true, strict: true }
 );
 
-productSchema.pre("validate", function (next) {
+productSchema.pre("validate", function () {
   const { type, fitData } = this;
 
-  if (!fitData) return next();
+  if (!fitData) return ;
 
   const hasUpper =
     fitData.upper &&
@@ -131,18 +143,14 @@ productSchema.pre("validate", function (next) {
   const filledSections = [hasUpper, hasLower, hasFootwear].filter(Boolean).length;
 
   if (filledSections > 1) {
-    return next(
-      new Error("Only one of fitData.upper, fitData.lower, or fitData.footwear can be filled")
-    );
+    throw new Error("Only one of fitData.upper, fitData.lower, or fitData.footwear can be filled");
   }
 
   if (type === "upper") {
     if (!hasUpper) {
-      return next(
-        new Error(
+        throw new Error(
           "For type 'upper', only fitData.upper with chest, waist, shoulder, sleeveLength, and length is allowed"
-        )
-      );
+        );
     }
 
     fitData.lower = undefined;
@@ -150,25 +158,21 @@ productSchema.pre("validate", function (next) {
   }
 
   if (type === "outerwear") {
-  if (!hasUpper) {
-    return next(
-      new Error(
-        "For type 'outerwear', fitData.upper with chest, waist, shoulder, sleeveLength, and length is required"
-      )
-    );
-  }
+    if (!hasUpper) {
+ throw new Error(
+          "For type 'outerwear', fitData.upper with chest, waist, shoulder, sleeveLength, and length is required"
+        );
+    }
 
-  fitData.lower = undefined;
-  fitData.footwear = undefined;
-}
+    fitData.lower = undefined;
+    fitData.footwear = undefined;
+  }
 
   if (type === "lower") {
     if (!hasLower) {
-      return next(
-        new Error(
+      throw new Error(
           "For type 'lower', only fitData.lower with waist, thigh, and length is allowed"
         )
-      );
     }
 
     fitData.upper = undefined;
@@ -177,17 +181,15 @@ productSchema.pre("validate", function (next) {
 
   if (type === "footwear") {
     if (!hasFootwear) {
-      return next(
-        new Error(
+      throw new Error(
           "For type 'footwear', only fitData.footwear.size is allowed"
-        )
-      );
+      )
     }
 
     fitData.upper = undefined;
     fitData.lower = undefined;
   }
-  next
+  return;
 });
 
-export const Product = mongoose.model("Product",productSchema)
+export const Product = mongoose.model("Product", productSchema)

@@ -1,4 +1,5 @@
 import {AIModel} from '../models/aiModel.model.js'
+import { ApiError } from '../utils/ApiError.js'
 
 
 class AiModelRepository{
@@ -8,7 +9,7 @@ class AiModelRepository{
         return modelDoc
     }
     async updateStatus(modeldocId,status,error,ModelMedia){
-        const modelDoc = await AIModel.findByIdAndUpdate({_id: modeldocId},{
+        const modelDoc = await AIModel.findByIdAndUpdate(modeldocId,{
             status,
             error,
             ModelMedia
@@ -18,6 +19,20 @@ class AiModelRepository{
     async getModelByServiceId(serviceId,sellerId){
         const modelDoc = await AIModel.findOne({serviceId,sellerId})
         return modelDoc
+    }
+    async getModelById(id){
+        const model = await AIModel.findById(id)
+        return model
+    }
+    async findModelImageUrl(id){
+        const model = await AIModel.findById(id)
+        if(!model){
+            throw new ApiError(404,"AiModel not found")
+        }
+        return {
+                url: model.modelMedia[0].url,
+                publicId: null
+            }
     }
 }
 

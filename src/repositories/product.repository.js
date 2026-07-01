@@ -1,5 +1,42 @@
 import { Product } from "../models/product.model.js";
+import { ApiError } from "../utils/ApiError.js";
 
-const findProductById = async (productId) => Product.findById(productId);
+class ProductRepository{
+    async findProductById(id){
+        return await Product.findById(id)
+    }
+    async findProductImageUrl(id,ownerId){
+        const product = await Product.findOne({
+            _id: id,
+            seller: ownerId
+        })
+        if(!product){
+            throw new ApiError(404,"Product not found")
+        }
+        return {
+            url: product.media?.productImages?.[0].url,
+            publicId: null
+        }
+    }
+    async addVirtualTryOnImage(id,sellerId,virtualTryOnImage){
+        const product = await Product.findOneAndUpdate(
+            {
+                _id: id,
+                seller: sellerId
+            },
+            {
+                $push:{
+                   "media.aiModelPreview": virtualTryOnImage
+                }
+            },
+            {returnDocument: "after"}
+        )
+        if(!product){
+            throw new ApiError(404,"Product not found")
+        }
+        return product
+    }
+    
+}
 
-export { findProductById };
+export const productRepository = new ProductRepository()

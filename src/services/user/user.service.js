@@ -8,9 +8,13 @@ import { validatePrompt } from '../../validators/prompt.validator.js'
 import { validateAspectRatio } from '../../validators/aspectRatio.validator.js'
 import { virtualTryOnRepository } from "../../repositories/virtualTryOn.repository.js";
 import fs from 'fs'
+import { env } from "../../config/env.js";
 class UserService {
     async virtualTryOnOutfit(req) {
         console.log("user service reached")
+        if (!env.BLACK_AI_KEY) {
+            throw new ApiError(503, "This service is currently unavailable")
+        }
         const { cloth1Id, cloth2Id, cloth3Id, prompt, ratio } = req.body;
         const validatedPrompt = validatePrompt(prompt)
         const validatedRatio = validateAspectRatio(ratio)
@@ -18,28 +22,28 @@ class UserService {
         try {
             const user = await userRepository.findUserById(req.user._id);
             modelPhoto = await modelImageResolver({
-                    user,
-                    filePath: req.files?.modelPhoto?.[0]?.path
-                })
+                user,
+                filePath: req.files?.modelPhoto?.[0]?.path
+            })
             cloth1 = await imageSourceResolver({
-                    filePath: req.files?.cloth1?.[0]?.path,
-                    docId: cloth1Id,
-                    ownerId: user._id,
-                    fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
-                })
+                filePath: req.files?.cloth1?.[0]?.path,
+                docId: cloth1Id,
+                ownerId: user._id,
+                fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
+            })
             cloth2 = await imageSourceResolver({
-                    filePath: req.files?.cloth2?.[0]?.path,
-                    docId: cloth2Id,
-                    ownerId: user._id,
-                    fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
-                })
+                filePath: req.files?.cloth2?.[0]?.path,
+                docId: cloth2Id,
+                ownerId: user._id,
+                fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
+            })
             cloth3 = await imageSourceResolver({
-                    filePath: req.files?.cloth3?.[0]?.path,
-                    docId: cloth3Id,
-                    ownerId: user._id,
-                    required: false,
-                    fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
-                })
+                filePath: req.files?.cloth3?.[0]?.path,
+                docId: cloth3Id,
+                ownerId: user._id,
+                required: false,
+                fetchImage: clothingItemRepository.findClothImage.bind(clothingItemRepository)
+            })
             const generatedImageUrl = await blackAiService.virtualTryOnOutfit({
                 clothingImage1: cloth1.url,
                 clothingImage2: cloth2.url,
@@ -70,6 +74,17 @@ class UserService {
             for (const image of temporaryImages) {
                 if (image?.publicId) {
                     await deleteFromCloudinary(image.publicId);
+                }
+            }
+            const temporaryFile = [
+                req.files?.modelPhoto?.[0].path,
+                req.files?.cloth1?.[0].path,
+                req.files?.cloth2?.[0].path,
+                req.files?.cloth3?.[0].path
+            ]
+            for (const file of temporaryFile) {
+                if (file && fs.existsSync(file)) {
+                    fs.unlinkSync(file)
                 }
             }
         }

@@ -17,15 +17,18 @@ const subscriptionSchema = new mongoose.Schema({
         enum: ["SELLER", "USER"],
         required: true
     },
-
-    latestOrderId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "SubscriptionOrder"
+    currentPlan:{
+        type: String
     },
-
     credits: {
         type: Number,
         default: 0
+    },
+    activatedAt:{
+        type: Date
+    },
+    expiresAt:{
+        type: Date
     }
 
 }, { timestamps: true });

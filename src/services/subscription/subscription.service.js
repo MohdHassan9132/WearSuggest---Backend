@@ -1,218 +1,169 @@
-import { ApiError }
-from "../../utils/ApiError.js";
-
-import { SUBSCRIPTION_PLANS }
-from "../../config/subscriptionPlans.js";
-
-import { razorpayService }
-from "../payment/razorpay.service.js";
-
-import { subscriptionOrderRepository }
-from "../../repositories/subscriptionOrder.respository.js";
-
-import { subscriptionRepository }
-from "../../repositories/subscription.repository.js";
-
-import { resolveSubscriberPayload }
-from "../../utils/role.resolver.js";
+import { ApiError } from "../../utils/ApiError.js";
+import { getPlanConfig } from "../../config/subscriptionPlans.js";
+import { razorpayService } from "../payment/razorpay.service.js";
+import { subscriptionOrderRepository } from "../../repositories/subscriptionOrder.respository.js";
+import { subscriptionRepository } from "../../repositories/subscription.repository.js";
+import { resolveSubscriber } from "../../utils/role.resolver.js";
 
 class SubscriptionService {
 
-    async createSubscriptionOrder({
-        subscriberId,
-        role,
-        plan
-    }) {
+    async createSubscriptionOrder({ subscriberId, role, plan }) {
+        const planConfig = getPlanConfig({ role, plan });
 
-        const roleKey = role.toUpperCase();
-
-        const selectedPlan =
-            SUBSCRIPTION_PLANS[roleKey]?.[plan];
-
-        if (!selectedPlan) {
-            throw new ApiError(
-                400,
-                "Invalid subscription plan"
-            );
-        }
-
-        const razorpayOrder =
-            await razorpayService.createOrder({
-                amount: selectedPlan.amount,
-                currency: selectedPlan.currency
-            });
-
-        const subscriberPayload =
-            resolveSubscriberPayload({
-                role: roleKey,
-                subscriberId
-            });
-
-        const orderPayload = {
-
-            ...subscriberPayload,
-
-            subscriberType: roleKey,
-
-            credits: selectedPlan.credits,
-
-            tier: plan,
-
-            paymentService: "Razorpay",
-
-            paymentOrderId: razorpayOrder.id,
-
-            amountPaid: razorpayOrder.amount,
-
-            paymentStatus: "created"
-        };
-
-        const order =
-            await subscriptionOrderRepository
-            .create(orderPayload);
-
-        return {
-            order,
-            razorpayOrder
-        };
-    }
-
-    async verifyFrontendPayment(data) {
-
-        const {
-            razorpay_order_id,
-            razorpay_payment_id,
-            razorpay_signature
-        } = data;
-
-        const isValid =
-            razorpayService
-            .verifyPaymentSignature({
-                orderId: razorpay_order_id,
-                paymentId: razorpay_payment_id,
-                signature: razorpay_signature
-            });
-
-        if (!isValid) {
-            throw new ApiError(
-                400,
-                "Invalid payment signature"
-            );
-        }
-
-        const order =
-            await subscriptionOrderRepository
-            .findByPaymentOrderId(
-                razorpay_order_id
-            );
-
-        if (!order) {
-            throw new ApiError(
-                404,
-                "Order not found"
-            );
-        }
-
-        order.paymentId = razorpay_payment_id;
-
-        order.paymentSignature =
-            razorpay_signature;
-
-        await order.save();
-
-        return {
-            verified: true,
-            awaitingWebhook: true
-};
-    }
-
-    async activateSubscription(order) {
-
-        const filter =
-            resolveSubscriberPayload({
-                role: order.subscriberType,
-                subscriberId:
-                    order.userId || order.sellerId
-            });
-
-        return await subscriptionRepository
-            .activateSubscription({
-
-                filter,
-
-                credits: order.credits,
-
-                latestOrderId: order._id
-            });
-    }
-
-async verifyWebhook(req) {
-
-    const signature =
-        req.headers["x-razorpay-signature"];
-
-    const isValid =
-        razorpayService
-        .verifyWebhookSignature({
-
-            rawBody: req.body,
-
-            signature
-        });
-
-    if (!isValid) {
-
+                if (planConfig.name === "FREE") {
         throw new ApiError(
             400,
-            "Invalid webhook signature"
+            "Free plan cannot be purchased."
         );
     }
 
-    const payload =
-        JSON.parse(req.body.toString());
+        const razorpayOrder = await razorpayService.createOrder({
+            amount: planConfig.amount,
+            currency: planConfig.currency
+        });
 
-    const event = payload.event;
+        const subscriber = resolveSubscriber({ role, subscriberId });
+        const subscriptionDetails = this.buildSubscriptionOrder(planConfig);
+        const subscriptionOrder = this.razorpayOrderToSubscriptionOrder(razorpayOrder);
 
-    if (event !== "payment.captured") {
-        return;
+        const order = await subscriptionOrderRepository.create({
+            subscriber,
+            subscription: subscriptionDetails,
+            order: subscriptionOrder
+        });
+
+        return { order, razorpayOrder };
     }
 
-    const payment =
-        payload.payload.payment.entity;
+    async verifyFrontendPayment(data) {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = data;
 
-    const orderId = payment.order_id;
+        const isValid = razorpayService.verifyPaymentSignature({
+            orderId: razorpay_order_id,
+            paymentId: razorpay_payment_id,
+            signature: razorpay_signature
+        });
 
-        const order =
-            await subscriptionOrderRepository
-            .findByPaymentOrderId(orderId);
+        if (!isValid) {
+            throw new ApiError(400, "Invalid payment signature");
+        }
+
+        const order = await subscriptionOrderRepository.findByPaymentOrderId(razorpay_order_id);
 
         if (!order) {
+            throw new ApiError(404, "Order not found");
+        }
+
+        order.paymentId = razorpay_payment_id;
+        order.paymentSignature = razorpay_signature;
+
+        await order.save();
+
+        return { verified: true, awaitingWebhook: true };
+    }
+
+    async initializeSubscription({ subscriberId, role }) {
+        const subscriber = resolveSubscriber({ role, subscriberId });
+        const planConfig = getPlanConfig({ role, plan: "FREE" });
+        const subscription = this.buildSubscription(planConfig);
+        
+        return await subscriptionRepository.create({
+            subscriber,
+            subscription
+        });
+    }
+
+    async activateSubscription(order) {
+        const subscriber = resolveSubscriber({
+            role: order.subscriberType,
+            subscriberId: order.userId || order.sellerId
+        });
+
+        const planConfig = getPlanConfig({ 
+            role: order.subscriberType, 
+            plan: order.plan 
+        });
+        const subscription = this.buildSubscription(planConfig);
+
+        return await subscriptionRepository.activate({
+            subscriber,
+            subscription
+        });
+    }
+
+    async verifyWebhook(req) {
+        const signature = req.headers["x-razorpay-signature"];
+
+        const isValid = razorpayService.verifyWebhookSignature({
+            rawBody: req.body,
+            signature
+        });
+
+        if (!isValid) {
+            throw new ApiError(400, "Invalid webhook signature");
+        }
+
+        const payload = JSON.parse(req.body.toString());
+        const event = payload.event;
+
+        if (event !== "payment.captured") {
             return;
         }
 
-        if (order.paymentStatus === "success") {
+        const payment = payload.payload.payment.entity;
+        const orderId = payment.order_id;
+
+        const order = await subscriptionOrderRepository.findByPaymentOrderId(orderId);
+
+        if (!order || order.paymentStatus === "success") {
             return;
         }
 
         order.paymentStatus = "success";
-
         await order.save();
 
         await this.activateSubscription(order);
     }
-    async getCurrentPlan({
-        role,
-        subscriberId
-    }) {
-        const filter = resolveSubscriberPayload({
-            role: role?.toUpperCase?.() || role,
-            subscriberId
-        });
 
-        return await subscriptionRepository
-            .getSubscription(filter);
+    async getCurrentPlan({ role, subscriberId }) {
+        const subscriber = resolveSubscriber({ role, subscriberId });
+        return await subscriptionRepository.get(subscriber);
+    }
+
+    razorpayOrderToSubscriptionOrder(razorpayOrder) {
+        return {
+            paymentService: "Razorpay",
+            paymentOrderId: razorpayOrder.id,
+            amount: razorpayOrder.amount,
+            amountPaid: razorpayOrder.amount_paid,
+            paymentStatus: razorpayOrder.status
+        };
+    }
+
+    buildSubscriptionOrder(planConfig) {
+        return {
+            plan: planConfig.name,
+            credits: planConfig.credits,
+            amount: planConfig.amount
+        };
+    }
+
+    buildSubscription(planConfig) {
+        const activatedAt = new Date();
+        let expiresAt = null;
+
+        if (planConfig.name !== "FREE") {
+            expiresAt = new Date(activatedAt);
+            expiresAt.setDate(expiresAt.getDate() + 30);
+        }
+
+        return {
+            currentPlan: planConfig.name,
+            credits: planConfig.credits,
+            activatedAt,
+            expiresAt
+        };
     }
 }
 
-export const subscriptionService =
-    new SubscriptionService();
+export const subscriptionService = new SubscriptionService();

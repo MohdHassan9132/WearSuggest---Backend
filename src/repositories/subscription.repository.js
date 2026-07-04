@@ -1,36 +1,29 @@
-import { Subscription }
-from "../models/subscirption.model.js";
+import { Subscription } from "../models/subscirption.model.js";
 
 class SubscriptionRepository {
 
-    async activateSubscription({
-        filter,
-        credits,
-        latestOrderId
-    }) {
-
-        return await Subscription
-        .findOneAndUpdate(
-            filter,
-            {
-                ...filter,
-
-                latestOrderId,
-
-                $inc: {
-                    credits
-                }
-            },
-            {
-                upsert: true,
-                new: true
-            }
-        );
+    async create({ subscriber, subscription }) {
+        return await Subscription.create({
+            ...subscriber,
+            ...subscription
+        });
     }
-    async getSubscription(filter){
-        return await Subscription.findOne(filter).populate("latestOrderId")
+
+    async activate({ subscriber, subscription }) {
+        return await Subscription
+            .findOneAndUpdate(
+                subscriber,
+                { $set: subscription },
+                { 
+                    upsert: true,
+                    new: true 
+                }
+            );
+    }
+
+    async get(subscriber) {
+        return await Subscription.findOne(subscriber);
     }
 }
 
-export const subscriptionRepository =
-    new SubscriptionRepository();
+export const subscriptionRepository = new SubscriptionRepository();

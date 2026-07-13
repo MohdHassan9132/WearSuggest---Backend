@@ -1,16 +1,18 @@
-import { stringValidator } from "../validators/string.validator";
+import { stringValidator } from "../validators/string.validator.js";
 export const resolveSubscriber = ({ role, subscriberId }) => {
     const normalizedRole = stringValidator(role).toUpperCase()
 
     switch (normalizedRole) {
         case "USER":
             return {
-                userId: subscriberId
+                userId: subscriberId,
+                subscriberType: "USER"
             };
 
         case "SELLER":
             return {
-                sellerId: subscriberId
+                sellerId: subscriberId,
+                subscriberType: "SELLER"
             };
 
         default:

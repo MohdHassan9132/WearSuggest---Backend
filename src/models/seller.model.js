@@ -34,6 +34,10 @@ const sellerSchema = new mongoose.Schema(
     type: String
   },
 
+  avatarPublicId:{
+    type: String
+  },
+
   refreshToken: {
     type: String
   },

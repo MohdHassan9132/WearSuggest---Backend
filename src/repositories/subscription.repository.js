@@ -1,13 +1,20 @@
-import { Subscription } from "../models/subscirption.model.js";
+import { Subscription } from "../models/subscription.model.js";
 
 class SubscriptionRepository {
 
-    async create({ subscriber, subscription }) {
-        return await Subscription.create({
-            ...subscriber,
-            ...subscription
-        });
-    }
+async create(
+    { subscriber, subscription },
+    { session } = {}
+) {
+    const subscriptionDoc = new Subscription({
+        ...subscriber,
+        ...subscription
+    });
+
+    await subscriptionDoc.save({ session });
+
+    return subscriptionDoc;
+}
 
     async activate({ subscriber, subscription }) {
         return await Subscription

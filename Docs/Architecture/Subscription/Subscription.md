@@ -79,6 +79,33 @@ SubscriptionService
     \-- SubscriptionRepository
 ```
 
+## Transaction Support
+
+Registration now creates two database documents:
+
+- `Account`
+- `Subscription`
+
+Both operations must succeed or fail together.
+
+For that reason, transaction ownership stays in the controller because it coordinates the full registration flow.
+
+The MongoDB session is propagated downward:
+
+```text
+Controller
+    |
+    v
+SubscriptionService
+    |
+    v
+SubscriptionRepository
+```
+
+The service and repository do not create, commit, or abort transactions themselves.
+
+They only participate in an existing transaction when a session is provided.
+
 ## Layer Responsibilities
 
 ### Controller
@@ -124,6 +151,11 @@ Main responsibilities:
 - create a subscription document
 - activate or upsert the current active subscription
 - fetch the active subscription by subscriber
+- optionally accept a MongoDB session from the caller
+- participate in the caller's transaction when a session is provided
+- behave like normal database operations when no session is provided
+
+Repositories never own transaction lifecycle such as starting, committing, or aborting transactions.
 
 Contract examples:
 
@@ -312,6 +344,28 @@ SubscriptionService.createSubscriptionOrder()
 Response
 ```
 
+### User Registration
+
+During User registration, `initializeSubscription()` is called internally.
+
+When a MongoDB session is provided, subscription creation participates in the caller's transaction.
+
+That guarantees atomic creation of both the `User` account and its initial `FREE` subscription.
+
+The complete User registration flow is documented in the User Architecture document.
+
+### Seller Registration
+
+During Seller registration, `initializeSubscription()` is called after the `Seller` is created.
+
+When a MongoDB session is provided, both `Seller` and `Subscription` are committed or rolled back together.
+
+Seller registration also interacts with Cloudinary.
+
+Cloudinary cleanup belongs to the Seller feature because external services cannot participate in MongoDB transactions.
+
+The complete Seller registration flow is documented in the Seller Architecture document.
+
 ## Frontend Payment Verification Flow
 
 ```text
@@ -371,20 +425,32 @@ There is also an internal service flow:
 initializeSubscription({ subscriberId, role })
 ```
 
-This is used to create a `FREE` active subscription without going through Razorpay.
+This is used internally during:
 
-That allows the system to assign a free starting plan while still rejecting `FREE` purchase attempts through the payment endpoint.
+- User Registration
+- Seller Registration
+
+It creates the initial `FREE` subscription without going through Razorpay.
+
+It also accepts an optional MongoDB session.
+
+That allows it to participate in an existing registration transaction while the payment endpoint still rejects `FREE` purchase attempts.
 
 ## Why This Design Is Better
 
 This design improves the feature in several ways:
 
 - Active subscription state is separated from payment history.
+- Registration now guarantees atomic creation of account and subscription.
+- Transaction ownership stays in the controller.
 - Repositories no longer contain business logic.
+- Repositories remain persistence-only even when transactions are used.
 - Services build domain objects before persistence.
+- Services remain reusable because transactions are optional.
 - Builders reduce duplicated object construction.
 - Plan configuration stays centralized.
 - Subscriber mapping is handled in one place.
+- External resources are handled separately from database consistency.
 - Webhook activation updates the active state from a successful order instead of mixing both concerns together.
 
 ## Summary

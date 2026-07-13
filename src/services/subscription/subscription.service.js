@@ -62,15 +62,15 @@ class SubscriptionService {
         return { verified: true, awaitingWebhook: true };
     }
 
-    async initializeSubscription({ subscriberId, role }) {
+    async initializeSubscription({ subscriberId, role },{session} = {}) {
         const subscriber = resolveSubscriber({ role, subscriberId });
-        const planConfig = getPlanConfig({ role, plan: "FREE" });
+        const planConfig = getPlanConfig({ role: subscriber.subscriberType, plan: "FREE" });
         const subscription = this.buildSubscription(planConfig);
         
         return await subscriptionRepository.create({
             subscriber,
             subscription
-        });
+        },{session});
     }
 
     async activateSubscription(order) {

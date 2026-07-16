@@ -28,14 +28,34 @@ class BlackAiService {
         if (clothingImage3) {
             formData.append("clothing_photo_3", clothingImage3)
         }
+        console.log("=== Form Data ===");
+
+for (const [key, value] of formData.entries()) {
+    console.log(key, "=", value);
+}
+
+console.log("=================");
         console.log("request send to black ai")
         const response = await fetch(url.toString(), {
             method: "POST",
             body: formData
         });
+        
         console.log("response recieved from blackai")
+        console.log("Status:", response.status);
+        console.log("OK:", response.ok);
+        const text = (await response.text()).trim();
 
-        const text = await response.text();
+try {
+    new URL(text);
+} catch {
+    throw new ApiError(502, "Black AI returned an invalid image URL");
+}
+
+return text;
+        console.log(JSON.stringify(text));
+        console.log("Raw response:");
+        console.log(text);
 
         if (!response.ok) {
             throw new ApiError(response.status, text);

@@ -110,6 +110,7 @@ const loginUser = asyncHandler(async (req, res) => {
     const isPasswordValid = await user.isPasswordCorrect(password);
 
     if (isPasswordValid) {
+        console.log("passowrd is valid")
         const accessToken = await user.generateAccessToken();
 
         const refreshToken = await user.generateRefreshToken();
@@ -137,7 +138,7 @@ const loginUser = asyncHandler(async (req, res) => {
                     "User logged in successfully"
                 )
             );
-    } else throw new ApiError(401, `Invalid Password for user - ${username}`);
+    } else throw new ApiError(401, `Invalid Password for user - ${login}`);
 });
 
 const logoutUser = asyncHandler(async (req, res) => {

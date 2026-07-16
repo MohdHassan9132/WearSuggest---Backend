@@ -4,18 +4,19 @@ import { razorpayService } from "../payment/razorpay.service.js";
 import { subscriptionOrderRepository } from "../../repositories/subscriptionOrder.respository.js";
 import { subscriptionRepository } from "../../repositories/subscription.repository.js";
 import { resolveSubscriber } from "../../utils/role.resolver.js";
+import {FEATURE_PRICING,getFeatureConfig} from '../../config/featurePricing.js'
 
 class SubscriptionService {
 
     async createSubscriptionOrder({ subscriberId, role, plan }) {
         const planConfig = getPlanConfig({ role, plan });
 
-                if (planConfig.name === "FREE") {
-        throw new ApiError(
-            400,
-            "Free plan cannot be purchased."
-        );
-    }
+        if (planConfig.name === "FREE") {
+            throw new ApiError(
+                400,
+                "Free plan cannot be purchased."
+            );
+        }
 
         const razorpayOrder = await razorpayService.createOrder({
             amount: planConfig.amount,
@@ -62,15 +63,15 @@ class SubscriptionService {
         return { verified: true, awaitingWebhook: true };
     }
 
-    async initializeSubscription({ subscriberId, role },{session} = {}) {
+    async initializeSubscription({ subscriberId, role }, { session } = {}) {
         const subscriber = resolveSubscriber({ role, subscriberId });
         const planConfig = getPlanConfig({ role: subscriber.subscriberType, plan: "FREE" });
         const subscription = this.buildSubscription(planConfig);
-        
+
         return await subscriptionRepository.create({
             subscriber,
             subscription
-        },{session});
+        }, { session });
     }
 
     async activateSubscription(order) {
@@ -79,9 +80,9 @@ class SubscriptionService {
             subscriberId: order.userId || order.sellerId
         });
 
-        const planConfig = getPlanConfig({ 
-            role: order.subscriberType, 
-            plan: order.plan 
+        const planConfig = getPlanConfig({
+            role: order.subscriberType,
+            plan: order.plan
         });
         const subscription = this.buildSubscription(planConfig);
 
@@ -123,6 +124,38 @@ class SubscriptionService {
         await order.save();
 
         await this.activateSubscription(order);
+    }
+    async charge({role,subscriberId,feature}){
+        const subscriber = resolveSubscriber({
+            role,
+            subscriberId
+        })
+
+        const subscription = await subscriptionRepository.deductCredits({
+            subscriber,
+            cost: feature.cost 
+        })
+        if(!subscription){
+            throw new ApiError(402,"Insufficient credits")
+        }
+        return {
+            chargedCost: feature.cost
+        }
+    }
+    async refund({role,subscriberId,cost}){
+        const subscriber = resolveSubscriber({
+            role,
+            subscriberId
+        })
+        const subscription = await subscriptionRepository.addCredits({
+            subscriber,
+            cost
+        })
+        if(!subscription){
+            throw new ApiError(404,"subscription nout found")
+        }
+        return subscription
+
     }
 
     async getCurrentPlan({ role, subscriberId }) {

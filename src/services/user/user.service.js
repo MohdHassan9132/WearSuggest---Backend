@@ -22,6 +22,8 @@ class UserService {
         ratio,
         files
     }) {
+        let modelPhoto, cloth1, cloth2, cloth3, chargedCredits
+        try {
         if (!env.BLACK_AI_KEY) {
             throw new ApiError(503, "This service is currently unavailable")
         }
@@ -46,8 +48,8 @@ class UserService {
             role,
             feature: "VIRTUAL_TRY_ON"
         })
-        let modelPhoto, cloth1, cloth2, cloth3, chargedCredits
-        try {
+        
+        
             const user = await userRepository.findUserById(userId)
             modelPhoto = await modelImageResolver({
                 user,

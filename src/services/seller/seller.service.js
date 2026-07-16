@@ -24,6 +24,8 @@ class SellerService {
         files,
         role
     }) {
+        let modelPhoto, product1, product2, product3, chargedCredits
+        try {
         if (!productId1) {
             throw new ApiError(400, "At least one existing product is required")
         }
@@ -55,8 +57,8 @@ class SellerService {
         const feature = determineSellerFeature({
             products: productSources
         })
-        let modelPhoto, product1, product2, product3, chargedCredits
-        try {
+
+        
             chargedCredits = await subscriptionService.charge({
                 role,
                 subscriberId: userId,

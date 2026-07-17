@@ -1,17 +1,24 @@
-export const resolveSubscriberPayload = ({
-    role,
-    subscriberId
-}) => {
+import { stringValidator } from "../validators/string.validator.js";
+export const resolveSubscriber = ({ role, subscriberId }) => {
+    const normalizedRole = stringValidator(role).toUpperCase()
 
-    const payload = {};
+    switch (normalizedRole) {
+        case "USER":
+            return {
+                userId: subscriberId,
+                subscriberType: "USER"
+            };
 
-    if (role === "USER") {
-        payload.userId = subscriberId;
+        case "SELLER":
+            return {
+                sellerId: subscriberId,
+                subscriberType: "SELLER"
+            };
+
+        default:
+            throw new ApiError(
+                400,
+                `Unsupported subscriber role: ${role}`
+            );
     }
-
-    if (role === "SELLER") {
-        payload.sellerId = subscriberId;
-    }
-
-    return payload;
 };

@@ -23,7 +23,7 @@ const subscriptionOrderSchema = new mongoose.Schema({
         required: true
     },
 
-    tier: {
+    plan: {
         type: String,
         required: true
     },
@@ -39,11 +39,6 @@ const subscriptionOrderSchema = new mongoose.Schema({
         unique: true,
         sparse: true
     },
-    paymentOrderId: {
-    type: String,
-    unique: true,
-    sparse: true
-    },
 
     paymentId: {
         type: String,
@@ -52,6 +47,9 @@ const subscriptionOrderSchema = new mongoose.Schema({
 
     paymentSignature: {
         type: String
+    },
+    amount:{
+        type: String,  
     },
 
     amountPaid: {
@@ -68,7 +66,7 @@ const subscriptionOrderSchema = new mongoose.Schema({
             "refunded"
         ],
         default: "created"
-    }
+    },
 
 }, { timestamps: true });
 

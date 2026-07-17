@@ -5,6 +5,8 @@ import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { cookieOptions } from "../config/cookie.js";
 import { env } from "../config/env.js";
+import { subscriptionService } from '../services/subscription/subscription.service.js'
+import mongoose from "mongoose";
 
 const registerUser = asyncHandler(async (req, res) => {
     // get user details from frontend
@@ -17,13 +19,13 @@ const registerUser = asyncHandler(async (req, res) => {
     // check for user creation
     // return res
 
-        let bodyMeasurements;
+    let bodyMeasurements;
     if (req.body.bodyMeasurements) {
-        bodyMeasurements = typeof req.body.bodyMeasurements === "string" 
-            ? JSON.parse(req.body.bodyMeasurements) 
+        bodyMeasurements = typeof req.body.bodyMeasurements === "string"
+            ? JSON.parse(req.body.bodyMeasurements)
             : req.body.bodyMeasurements;
     }
-        
+
     // If footsize isn't provided, it will just be undefined (which Mongoose allows)
     const footsize = req.body.footsize;
 
@@ -44,34 +46,43 @@ const registerUser = asyncHandler(async (req, res) => {
             409,
             "A user with the following email or username already exists!"
         );
-
-    const user = await User.create({
-        username: Username,
-        email: Email,
-        password,
-        bodyMeasurements,
-        footsize
-    });
-
-    const createdUser = await User.findById(user._id).select(
-        "-password -refreshToken"
-    );
-
-    if (!createdUser)
-        throw new ApiError(
-            500,
-            "Something went wrong during registering new user!"
-        );
-
-    return res
-        .status(201)
-        .json(
-            new ApiResponse(
-                200,
-                createdUser,
-                "New user registered successfully!"
-            )
-        );
+        const session = await mongoose.startSession()
+    try {
+        session.startTransaction()
+        const user = new User({
+            username: Username,
+            email: Email,
+            password,
+            bodyMeasurements,
+            footsize,
+        })
+        await user.save({session})
+        await subscriptionService.initializeSubscription(
+            {
+            role: "USER",
+            subscriberId: user._id
+            },
+            {session}
+        )
+        await session.commitTransaction();
+        const createdUser = user.toObject()
+        delete createdUser.password
+        delete createdUser.refreshToken
+        return res
+            .status(201)
+            .json(
+                new ApiResponse(
+                    201,
+                    createdUser,
+                    "New user registered successfully!"
+                )
+            );
+    } catch (error) {
+        await session.abortTransaction()
+        throw error
+    }finally{
+        await session.endSession();
+    }
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -99,6 +110,7 @@ const loginUser = asyncHandler(async (req, res) => {
     const isPasswordValid = await user.isPasswordCorrect(password);
 
     if (isPasswordValid) {
+        console.log("passowrd is valid")
         const accessToken = await user.generateAccessToken();
 
         const refreshToken = await user.generateRefreshToken();
@@ -126,7 +138,7 @@ const loginUser = asyncHandler(async (req, res) => {
                     "User logged in successfully"
                 )
             );
-    } else throw new ApiError(401, `Invalid Password for user - ${username}`);
+    } else throw new ApiError(401, `Invalid Password for user - ${login}`);
 });
 
 const logoutUser = asyncHandler(async (req, res) => {

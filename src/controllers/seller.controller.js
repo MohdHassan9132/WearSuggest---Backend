@@ -5,14 +5,16 @@ import { asyncHandler } from "../utils/AsyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Seller } from "../models/seller.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { cookieOptions, stateCookieOptions } from "../config/cookie.js";
 import { env } from "../config/env.js";
-
+import mongoose from "mongoose";
+import fs from 'fs'
+import {subscriptionService} from '../services/subscription/subscription.service.js'
 // Helper function to log Instagram API errors consistently
 const logInstagramError = (label, error) => {
     console.error(`🔴 [INSTAGRAM ERROR] ${label}:`);
-    
+
     if (error.response) {
         // Instagram API responded with error
         console.error(`   Status: ${error.response.status}`);
@@ -26,7 +28,7 @@ const logInstagramError = (label, error) => {
         // Something else happened
         console.error(`   Message: ${error.message}`);
     }
-    
+
     console.error(`   Full Error:`, error);
 };
 
@@ -84,7 +86,7 @@ const exchangeCodeForShortLivedToken = async (code) => {
     console.log(`   Using redirect_uri: ${env.INSTAGRAM_REDIRECT_URI}`);
     console.log(`   Using client_id: ${env.INSTAGRAM_CLIENT_ID?.slice(0, 8)}...`);
     console.log(`   Code first 12 chars: ${code?.slice(0, 12)}...`);
-    
+
     try {
         const response = await axios.post(
             "https://api.instagram.com/oauth/access_token",
@@ -101,11 +103,11 @@ const exchangeCodeForShortLivedToken = async (code) => {
                 },
             }
         );
-        
+
         console.log(`✅ [1/5] exchangeCodeForShortLivedToken - SUCCESS`);
         console.log(`   Response has access_token: ${!!response.data.access_token}`);
         console.log(`   Token first 12 chars: ${response.data.access_token?.slice(0, 12)}...`);
-        
+
         return response.data;
     } catch (error) {
         console.error(`❌ [1/5] exchangeCodeForShortLivedToken - FAILED`);
@@ -117,7 +119,7 @@ const exchangeCodeForShortLivedToken = async (code) => {
 const exchangeShortLivedForLongLivedToken = async (shortLivedToken) => {
     console.log(`\n🟡 [2/5] exchangeShortLivedForLongLivedToken - START`);
     console.log(`   Short token first 12 chars: ${shortLivedToken?.slice(0, 12)}...`);
-    
+
     try {
         const response = await axios.get("https://graph.instagram.com/access_token", {
             params: {
@@ -126,11 +128,11 @@ const exchangeShortLivedForLongLivedToken = async (shortLivedToken) => {
                 access_token: shortLivedToken,
             },
         });
-        
+
         console.log(`✅ [2/5] exchangeShortLivedForLongLivedToken - SUCCESS`);
         console.log(`   Long token first 12 chars: ${response.data.access_token?.slice(0, 12)}...`);
         console.log(`   Expires in: ${response.data.expires_in} seconds`);
-        
+
         return response.data;
     } catch (error) {
         console.error(`❌ [2/5] exchangeShortLivedForLongLivedToken - FAILED`);
@@ -142,7 +144,7 @@ const exchangeShortLivedForLongLivedToken = async (shortLivedToken) => {
 const getInstagramProfile = async (accessToken) => {
     console.log(`\n🟡 [3/5] getInstagramProfile - START`);
     console.log(`   Token first 12 chars: ${accessToken?.slice(0, 12)}...`);
-    
+
     try {
         const response = await axios.get("https://graph.instagram.com/me", {
             params: {
@@ -150,11 +152,11 @@ const getInstagramProfile = async (accessToken) => {
                 access_token: accessToken,
             },
         });
-        
+
         console.log(`✅ [3/5] getInstagramProfile - SUCCESS`);
         console.log(`   Instagram ID: ${response.data.id}`);
         console.log(`   Instagram Username: ${response.data.username}`);
-        
+
         return response.data;
     } catch (error) {
         console.error(`❌ [3/5] getInstagramProfile - FAILED`);
@@ -164,7 +166,7 @@ const getInstagramProfile = async (accessToken) => {
 };
 
 const registerSeller = asyncHandler(async (req, res) => {
-    const { name, email, password, contactNumber, source } = req.body;
+    const { email, password } = req.body;
 
     if (!email || !password) {
         throw new ApiError(400, "Email and password are required");
@@ -177,43 +179,48 @@ const registerSeller = asyncHandler(async (req, res) => {
     if (existingSeller) {
         throw new ApiError(409, "Seller with this email already exists!");
     }
-
-    let avatarUrl = "";
-
-    if (req.file) {
-        const avatar = await uploadOnCloudinary(req.file.path);
-        avatarUrl = avatar?.secure_url || "";
+    let avatar = null
+    let seller;
+    let session;
+    try {
+        if(req.file){
+            avatar = await uploadOnCloudinary(req.file?.path)
+        }
+        session = await mongoose.startSession()
+        try {
+            session.startTransaction()
+            seller = new Seller({
+                email: Email,
+                password,
+                avatar: avatar?.secure_url,
+                avatarPublicId: avatar?.public_id
+            })
+            await seller.save({session})
+            await subscriptionService.initializeSubscription({
+                role: "SELLER",
+                subscriberId: seller._id
+            },{session})
+            await session.commitTransaction()
+        } catch (error) {
+            await session.abortTransaction()
+            throw error
+        }finally{
+            await session.endSession()
+        }
+    } catch (error) {
+        if(avatar?.public_id){
+            await deleteFromCloudinary(avatar.public_id)
+        }
+        throw error
+    }finally{
+        if(req.file && fs.existsSync(req.file.path)){
+            fs.unlinkSync(req.file.path)
+        }
     }
-
-    const seller = await Seller.create({
-        email: Email,
-        password,
-        name: name || "",
-        contactNumber: contactNumber || "",
-        source: source || "",
-        avatar: avatarUrl,
-    });
-
-    const createdSeller = await Seller.findById(seller._id).select(
-        "-password -refreshToken"
-    );
-
-    if (!createdSeller) {
-        throw new ApiError(
-            500,
-            "Something went wrong during registering new seller!"
-        );
-    }
-
-    return res
-        .status(201)
-        .json(
-            new ApiResponse(
-                200,
-                createdSeller,
-                "New seller registered successfully!"
-            )
-        );
+    const createdSeller = seller.toObject()
+    delete createdSeller.password
+    delete createdSeller.refreshToken
+    return res.status(201).json(new ApiResponse(201,createdSeller,"Seller registered successfully"))
 });
 
 const loginSeller = asyncHandler(async (req, res) => {
@@ -265,16 +272,16 @@ const loginSeller = asyncHandler(async (req, res) => {
 const instagramLoginSeller = asyncHandler(async (req, res) => {
     console.log("\n🔵 [START] instagramLoginSeller - Initiating Instagram OAuth login");
     console.log("📋 Checking environment variables...");
-    
+
     // Log environment variables status (but not full secrets)
     console.log(`   INSTAGRAM_CLIENT_ID exists: ${!!env.INSTAGRAM_CLIENT_ID}`);
     if (env.INSTAGRAM_CLIENT_ID) {
         console.log(`   INSTAGRAM_CLIENT_ID first 8 chars: ${env.INSTAGRAM_CLIENT_ID.slice(0, 8)}...`);
     }
-    
+
     console.log(`   INSTAGRAM_CLIENT_SECRET exists: ${!!env.INSTAGRAM_CLIENT_SECRET}`);
     console.log(`   INSTAGRAM_REDIRECT_URI: ${env.INSTAGRAM_REDIRECT_URI}`);
-    
+
     if (
         !env.INSTAGRAM_CLIENT_ID ||
         !env.INSTAGRAM_CLIENT_SECRET ||
@@ -289,7 +296,7 @@ const instagramLoginSeller = asyncHandler(async (req, res) => {
 
     const authUrl = getInstagramAuthUrl(state);
     console.log(`🌐 Generated Instagram OAuth URL: ${authUrl}`);
-    
+
     // Log important URL parameters for debugging
     const urlObj = new URL(authUrl);
     console.log(`   Redirect URI in URL: ${urlObj.searchParams.get("redirect_uri")}`);
@@ -310,10 +317,10 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
     console.log("📋 Full request query parameters:", JSON.stringify(req.query, null, 2));
     console.log("🍪 Request cookies:", Object.keys(req.cookies));
     console.log(`   instagramOAuthState cookie exists: ${!!req.cookies.instagramOAuthState}`);
-    
+
     const { code, state, error, error_reason, error_description } = req.query;
     const savedState = req.cookies.instagramOAuthState;
-    
+
     console.log(`🔑 Code received: ${code ? `Yes (first 12 chars: ${code.slice(0, 12)}...)` : "NO"}`);
     console.log(`🔐 State from query: ${state ? state.slice(0, 12) + "..." : "not provided"}`);
     console.log(`🔐 Saved state from cookie: ${savedState ? savedState.slice(0, 12) + "..." : "not found"}`);
@@ -335,13 +342,13 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
     }
 
     console.log(`✅ Authorization code received successfully`);
-    
+
     // If state does not match, we stop here because the callback
     // could have been triggered from some other site or old request.
     console.log("🛡️ Validating CSRF state token...");
     const stateMatches = state && savedState && state === savedState;
     console.log(`   State matches: ${stateMatches}`);
-    
+
     if (!stateMatches) {
         console.error("❌ CSRF state validation failed!");
         console.error(`   Query state: ${state}`);
@@ -351,28 +358,28 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
             .clearCookie("instagramOAuthState", stateCookieOptions)
             .redirect(getFrontendBrandLoginUrl("Instagram login state is invalid"));
     }
-    
+
     console.log("✅ CSRF state validation passed");
 
     try {
         console.log("\n🚀 Starting token exchange and profile fetch sequence...");
-        
+
         // Step 1: Exchange code for short-lived token
         console.log("📡 [Step 1/3] Exchanging code for short-lived token...");
         const shortLivedTokenData = await exchangeCodeForShortLivedToken(code);
-        
+
         // Step 2: Exchange short-lived for long-lived token
         console.log("📡 [Step 2/3] Exchanging short-lived token for long-lived token...");
         const longLivedTokenData = await exchangeShortLivedForLongLivedToken(
             shortLivedTokenData.access_token
         );
-        
+
         // Step 3: Get Instagram profile
         console.log("📡 [Step 3/3] Fetching Instagram profile...");
         const instagramProfile = await getInstagramProfile(
             longLivedTokenData.access_token
         );
-        
+
         console.log("\n👤 Instagram profile retrieved successfully:");
         console.log(`   ID: ${instagramProfile.id}`);
         console.log(`   Username: ${instagramProfile.username}`);
@@ -382,7 +389,7 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
         let seller = await Seller.findOne({
             instagramId: instagramProfile.id,
         });
-        
+
         console.log(`   Existing seller found: ${!!seller}`);
 
         const instagramSellerData = {
@@ -394,7 +401,7 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
             ),
             instagramConnected: true,
         };
-        
+
         console.log(`📅 Token expires at: ${instagramSellerData.igTokenExpiresAt}`);
 
         if (seller) {
@@ -426,17 +433,17 @@ const instagramCallbackSeller = asyncHandler(async (req, res) => {
             .cookie("sellerAccessToken", accessToken, cookieOptions)
             .cookie("sellerRefreshToken", refreshToken, cookieOptions)
             .redirect(getFrontendBrandDashboardUrl());
-            
+
     } catch (instagramError) {
         console.error("\n💥 [ERROR] Instagram OAuth flow failed!");
         logInstagramError("instagramCallbackSeller", instagramError);
-        
+
         const message =
             instagramError.response?.data?.error_message ||
             instagramError.response?.data?.error?.message ||
             instagramError.message ||
             "Instagram login failed";
-        
+
         console.log(`🔄 Redirecting to brand login with error message: ${message}`);
         return res
             .clearCookie("instagramOAuthState", stateCookieOptions)

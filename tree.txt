@@ -1,10 +1,37 @@
 
 ```
 Backend
+├─ .dockerignore
 ├─ .prettierignore
 ├─ .prettierrc
+├─ Dockerfile
 ├─ Docs
 │  ├─ Architecture
+│  │  ├─ AIModel
+│  │  ├─ ClothingItem
+│  │  ├─ Fit
+│  │  ├─ GlobalErrorHandling
+│  │  ├─ Outfit
+│  │  ├─ Post
+│  │  ├─ Product
+│  │  ├─ Seller
+│  │  ├─ Subscription
+│  │  │  └─ Subscription.md
+│  │  ├─ User
+│  │  └─ VirtualTryOn
+│  │     └─ VirtualTryOn.md
+│  ├─ Learning
+│  │  ├─ 2026-06-13-AtomicDBCreations.md
+│  │  ├─ 2026-06-25-VirtualTryOn.md
+│  │  ├─ 2026-06-28-VirtualTryOn.md
+│  │  ├─ 2026-06-29-VirtualTryOn.md
+│  │  ├─ 2026-06-30-RepoResponsibility.md
+│  │  ├─ 2026-07-01-BranchMerge.md
+│  │  ├─ 2026-07-04.md
+│  │  ├─ 2026-07-16-VirtualTryOnImplementationAlignment.md
+│  │  ├─ 2026-07-21-DockerAndTesting.md
+│  │  └─ 2026-07-23TestingArchitecture.md
+│  ├─ ReqAndResonseStrucutre
 │  │  ├─ AIModel
 │  │  ├─ ClothingItem
 │  │  ├─ Fit
@@ -17,128 +44,115 @@ Backend
 │  │  ├─ User
 │  │  └─ VirtualTryOn
 │  │     └─ VirtualTryOn.md
-│  ├─ Learning
-│  │  ├─ 2026-0-13-AtomicDBCreations.md
-│  │  ├─ 2026-06-25-VirtualTryOn.md
-│  │  ├─ 2026-06-28-VirtualTryOn.md
-│  │  ├─ 2026-06-29-VirtualTryOn.md
-│  │  ├─ 2026-06-30-RepoResponsibility.md
-│  │  ├─ 2026-07-01-BranchMerge.md
-│  │  └─ 2026-07-04.md
-│  └─ ReqAndResonseStrucutre
-│     ├─ AIModel
-│     ├─ ClothingItem
-│     ├─ Fit
-│     ├─ Outfit
-│     ├─ Post
-│     ├─ Product
-│     ├─ Seller
-│     ├─ Subscription
-│     │  └─ Subscription.md
-│     ├─ User
-│     └─ VirtualTryOn
-│        └─ VirtualTryOn.md
+│  └─ Testing
+│     └─ Architecture.md
 ├─ package-lock.json
 ├─ package.json
 ├─ public
 │  └─ temp
 ├─ Readme.md
-└─ src
-   ├─ app.js
-   ├─ config
-   │  ├─ cookie.js
-   │  ├─ cors.js
-   │  ├─ env.js
-   │  ├─ featurePricing.js
-   │  └─ subscriptionPlans.js
-   ├─ constants
-   │  ├─ clothingTypes.js
-   │  ├─ colors.js
-   │  ├─ occasions.js
-   │  └─ seasons.js
-   ├─ controllers
-   │  ├─ aiModel.controller.js
-   │  ├─ clothingItem.controller.js
-   │  ├─ fit.controller.js
-   │  ├─ post.controller.js
-   │  ├─ product.controller.js
-   │  ├─ seller.controller.js
-   │  ├─ subscription.controller.js
-   │  ├─ user.controller.js
-   │  └─ virtualTryOn.controller.js
-   ├─ db
-   │  └─ index.js
-   ├─ index.js
-   ├─ middleware
-   │  ├─ auth.middleware.js
-   │  ├─ multer.middleware.js
-   │  └─ rateLimit.middleware.js
-   ├─ models
-   │  ├─ aiModel.model.js
-   │  ├─ clothingItem.model.js
-   │  ├─ post.model.js
-   │  ├─ product.model.js
-   │  ├─ seller.model.js
-   │  ├─ subscription.model.js
-   │  ├─ subscriptionOrder.model.js
-   │  ├─ user.model.js
-   │  └─ virtualTryOn.model.js
-   ├─ repositories
-   │  ├─ aiModel.repository.js
-   │  ├─ clothingItem.repository.js
-   │  ├─ post.repository.js
-   │  ├─ product.repository.js
-   │  ├─ seller.repository.js
-   │  ├─ subscription.repository.js
-   │  ├─ subscriptionOrder.respository.js
-   │  ├─ user.repository.js
-   │  └─ virtualTryOn.repository.js
-   ├─ rules
-   │  └─ color.rules.js
-   ├─ scripts
-   │  ├─ instagramTokenCron.js
-   │  ├─ listModels.js
-   │  └─ seedProducts.js
-   ├─ services
-   │  ├─ ai
-   │  │  ├─ gemini.config.js
-   │  │  └─ tagging.service.js
-   │  ├─ BlackAi
-   │  │  └─ blackAi.service.js
-   │  ├─ FashnApi
-   │  │  └─ fashnApi.service.js
-   │  ├─ payment
-   │  │  └─ razorpay.service.js
-   │  ├─ seller
-   │  │  └─ seller.service.js
-   │  ├─ subscription
-   │  │  └─ subscription.service.js
-   │  └─ user
-   │     └─ user.service.js
-   ├─ utils
-   │  ├─ ApiError.js
-   │  ├─ ApiResponse.js
-   │  ├─ AsyncHandler.js
-   │  ├─ base64Convertor.js
-   │  ├─ cleanup.js
-   │  ├─ cloudinary.js
-   │  ├─ fit
-   │  │  ├─ buildFitSummary.js
-   │  │  ├─ calculateFit.js
-   │  │  ├─ fitRules.js
-   │  │  ├─ footwearConverter.js
-   │  │  └─ formatFitResponse.js
-   │  ├─ image.resolver.js
-   │  ├─ logger.js
-   │  └─ role.resolver.js
-   ├─ validators
-   │  ├─ aspectRatio.validator.js
-   │  ├─ noOfImages.validator.js
-   │  ├─ number.validator.js
-   │  ├─ prompt.validator.js
-   │  ├─ string.validator.js
-   │  └─ subscription.validator.js
-   └─ workers
-      └─ instagramPublish.worker.js
+├─ src
+│  ├─ app.js
+│  ├─ config
+│  │  ├─ cookie.js
+│  │  ├─ cors.js
+│  │  ├─ env.js
+│  │  ├─ featurePricing.js
+│  │  └─ subscriptionPlans.js
+│  ├─ constants
+│  │  ├─ clothingTypes.js
+│  │  ├─ colors.js
+│  │  ├─ occasions.js
+│  │  └─ seasons.js
+│  ├─ controllers
+│  │  ├─ aiModel.controller.js
+│  │  ├─ clothingItem.controller.js
+│  │  ├─ fit.controller.js
+│  │  ├─ post.controller.js
+│  │  ├─ product.controller.js
+│  │  ├─ seller.controller.js
+│  │  ├─ subscription.controller.js
+│  │  ├─ user.controller.js
+│  │  └─ virtualTryOn.controller.js
+│  ├─ db
+│  │  └─ index.js
+│  ├─ index.js
+│  ├─ middleware
+│  │  ├─ auth.middleware.js
+│  │  ├─ multer.middleware.js
+│  │  └─ rateLimit.middleware.js
+│  ├─ models
+│  │  ├─ aiModel.model.js
+│  │  ├─ clothingItem.model.js
+│  │  ├─ post.model.js
+│  │  ├─ product.model.js
+│  │  ├─ seller.model.js
+│  │  ├─ subscription.model.js
+│  │  ├─ subscriptionOrder.model.js
+│  │  ├─ user.model.js
+│  │  └─ virtualTryOn.model.js
+│  ├─ repositories
+│  │  ├─ aiModel.repository.js
+│  │  ├─ clothingItem.repository.js
+│  │  ├─ post.repository.js
+│  │  ├─ product.repository.js
+│  │  ├─ seller.repository.js
+│  │  ├─ subscription.repository.js
+│  │  ├─ subscriptionOrder.respository.js
+│  │  ├─ user.repository.js
+│  │  └─ virtualTryOn.repository.js
+│  ├─ rules
+│  │  └─ color.rules.js
+│  ├─ scripts
+│  │  ├─ instagramTokenCron.js
+│  │  ├─ listModels.js
+│  │  └─ seedProducts.js
+│  ├─ services
+│  │  ├─ ai
+│  │  │  ├─ gemini.config.js
+│  │  │  └─ tagging.service.js
+│  │  ├─ BlackAi
+│  │  │  └─ blackAi.service.js
+│  │  ├─ FashnApi
+│  │  │  └─ fashnApi.service.js
+│  │  ├─ payment
+│  │  │  └─ razorpay.service.js
+│  │  ├─ seller
+│  │  │  └─ seller.service.js
+│  │  ├─ subscription
+│  │  │  └─ subscription.service.js
+│  │  └─ user
+│  │     └─ user.service.js
+│  ├─ utils
+│  │  ├─ ApiError.js
+│  │  ├─ ApiResponse.js
+│  │  ├─ AsyncHandler.js
+│  │  ├─ base64Convertor.js
+│  │  ├─ cleanup.js
+│  │  ├─ cloudinary.js
+│  │  ├─ fit
+│  │  │  ├─ buildFitSummary.js
+│  │  │  ├─ calculateFit.js
+│  │  │  ├─ fitRules.js
+│  │  │  ├─ footwearConverter.js
+│  │  │  └─ formatFitResponse.js
+│  │  ├─ image.resolver.js
+│  │  ├─ logger.js
+│  │  └─ role.resolver.js
+│  ├─ validators
+│  │  ├─ aspectRatio.validator.js
+│  │  ├─ noOfImages.validator.js
+│  │  ├─ number.validator.js
+│  │  ├─ prompt.validator.js
+│  │  ├─ string.validator.js
+│  │  └─ subscription.validator.js
+│  └─ workers
+│     └─ instagramPublish.worker.js
+└─ tests
+   ├─ endpoints
+   └─ units
+      ├─ repositories
+      └─ services
+         └─ subscription.test.js
 
 ```

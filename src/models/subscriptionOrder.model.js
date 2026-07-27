@@ -67,6 +67,9 @@ const subscriptionOrderSchema = new mongoose.Schema({
         ],
         default: "created"
     },
+    IdempotencyKey:{
+        type: String
+    }
 
 }, { timestamps: true });
 

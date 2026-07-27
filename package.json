@@ -10,7 +10,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "listModels": "node src/scripts/listModels.js",
-    "seedProducts": "node src/scripts/seedProducts.js"
+    "seedProducts": "node src/scripts/seedProducts.js",
+    "test": "vitest"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

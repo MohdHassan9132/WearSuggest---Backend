@@ -52,7 +52,7 @@ it("should initialize subscription", async () => {
 
     subscriptionRepository.create.mockResolvedValue({
         ...subscriber,
-        currentPlan: "FREE",
+        currentPlan: "BRAND",
         credits: 100,
         activatedAt: expect.any(Date),
     });

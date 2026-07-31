@@ -63,7 +63,7 @@ class SubscriptionService {
         return { verified: true, awaitingWebhook: true };
     }
 
-    async initializeSubscription({ subscriberId, role }, { session } = {}) {
+    async initializeSubscription({ subscriberId, role }, { options } = {}) {
         const subscriber = resolveSubscriber({ role, subscriberId });
         const planConfig = getPlanConfig({ role: subscriber.subscriberType, plan: "FREE" });
         const subscription = this.buildSubscription(planConfig);
@@ -71,7 +71,7 @@ class SubscriptionService {
         return await subscriptionRepository.create({
             subscriber,
             subscription
-        }, { session });
+        },options);
     }
 
     async activateSubscription(order) {
@@ -160,7 +160,11 @@ class SubscriptionService {
 
     async getCurrentPlan({ role, subscriberId }) {
         const subscriber = resolveSubscriber({ role, subscriberId });
-        return await subscriptionRepository.get(subscriber);
+        const plan =  await subscriptionRepository.get(subscriber);
+        if(!plan){
+            throw new ApiError(404,"subscription not found")
+        }
+        return plan
     }
 
     razorpayOrderToSubscriptionOrder(razorpayOrder) {

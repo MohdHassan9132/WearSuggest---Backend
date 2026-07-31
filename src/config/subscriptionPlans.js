@@ -6,7 +6,7 @@ export const SUBSCRIPTION_PLANS = {
         FREE: {
             amount: 0,
             credits: 100,
-            currency: "INR"
+            currency: null
         },
         PRO: {
             amount: 19900,

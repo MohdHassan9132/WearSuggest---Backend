@@ -69,7 +69,5 @@ export const getCurrentPlan = asyncHandler(async(req,res)=>{
             subscriberId: req.user._id
         }
     )
-    console.log("From Controller",plan)
-
     return res.status(200).json(new ApiResponse(200,plan,"Current plan fetched successfully"))
 })

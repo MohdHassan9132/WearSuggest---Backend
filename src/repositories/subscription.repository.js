@@ -4,14 +4,14 @@ class SubscriptionRepository {
 
     async create(
         { subscriber, subscription },
-        { session } = {}
+        { options } = {}
     ) {
         const subscriptionDoc = new Subscription({
             ...subscriber,
             ...subscription
         });
 
-        await subscriptionDoc.save({ session });
+        await subscriptionDoc.save(options);
 
         return subscriptionDoc;
     }

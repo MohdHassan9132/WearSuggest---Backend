@@ -1,23 +1,14 @@
 
 ```
-Backend
+WearSuggest---Backend
 ├─ .dockerignore
 ├─ .prettierignore
 ├─ .prettierrc
 ├─ Dockerfile
 ├─ Docs
 │  ├─ Architecture
-│  │  ├─ AIModel
-│  │  ├─ ClothingItem
-│  │  ├─ Fit
-│  │  ├─ GlobalErrorHandling
-│  │  ├─ Outfit
-│  │  ├─ Post
-│  │  ├─ Product
-│  │  ├─ Seller
 │  │  ├─ Subscription
 │  │  │  └─ Subscription.md
-│  │  ├─ User
 │  │  └─ VirtualTryOn
 │  │     └─ VirtualTryOn.md
 │  ├─ Learning
@@ -30,18 +21,12 @@ Backend
 │  │  ├─ 2026-07-04.md
 │  │  ├─ 2026-07-16-VirtualTryOnImplementationAlignment.md
 │  │  ├─ 2026-07-21-DockerAndTesting.md
-│  │  └─ 2026-07-23TestingArchitecture.md
+│  │  ├─ 2026-07-23TestingArchitecture.md
+│  │  ├─ 2026-07-27-UnderstandingUnitTestingWithVitest.md
+│  │  └─ 2026-07-29-LearningGitHubActionsRulesetsAndBranchProtection.md
 │  ├─ ReqAndResonseStrucutre
-│  │  ├─ AIModel
-│  │  ├─ ClothingItem
-│  │  ├─ Fit
-│  │  ├─ Outfit
-│  │  ├─ Post
-│  │  ├─ Product
-│  │  ├─ Seller
 │  │  ├─ Subscription
 │  │  │  └─ Subscription.md
-│  │  ├─ User
 │  │  └─ VirtualTryOn
 │  │     └─ VirtualTryOn.md
 │  └─ Testing
@@ -149,10 +134,14 @@ Backend
 │  └─ workers
 │     └─ instagramPublish.worker.js
 └─ tests
-   ├─ endpoints
-   └─ units
-      ├─ repositories
-      └─ services
-         └─ subscription.test.js
+   └─ subscription
+      ├─ endpoints
+      ├─ integrations
+      │  └─ repositories
+      │     └─ get.test.js
+      └─ units
+         └─ services
+            ├─ getCurrent.test.js
+            └─ initialize.test.js
 
 ```

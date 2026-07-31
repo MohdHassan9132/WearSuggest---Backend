@@ -1,5 +1,5 @@
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production" || process.env.USING_NGROK === "true";
 
 export const cookieOptions = {
     httpOnly: true,
